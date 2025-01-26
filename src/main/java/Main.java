@@ -104,12 +104,15 @@ public class Main {
 
     private static void executeProgram(File programFile, String[] arguments) {
         try {
+            // Obtenha o nome do arquivo (não o caminho completo)
+            String programName = programFile.getName(); // Usa apenas o nome do arquivo
+
             String[] commandWithArgs = new String[arguments.length + 1];
-            commandWithArgs[0] = programFile.getCanonicalPath(); // Use full path
+            commandWithArgs[0] = programName; // Usar apenas o nome do executável
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
 
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
-            processBuilder.directory(new File(System.getProperty("user.dir"))); // Set working directory
+            processBuilder.directory(new File(System.getProperty("user.dir"))); // Define o diretório de trabalho
             Process process = processBuilder.start();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -127,7 +130,8 @@ public class Main {
 
             process.waitFor();
         } catch (IOException | InterruptedException e) {
-            System.err.println("Error executing program: " + e.getMessage());
+            System.err.println("Erro ao executar o programa: " + e.getMessage());
         }
     }
+
 }
