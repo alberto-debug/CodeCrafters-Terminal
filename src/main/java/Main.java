@@ -59,7 +59,7 @@ public class Main {
 
                 if (path.contains("~")) {
                     String homeDirectory = System.getProperty("HOME");
-                    path = path.replaceFirst("~", homeDirectory);
+                    path = path.replace("~", System.getenv("HOME"));
                 }
 
                 if (path.startsWith("./") || path.startsWith("../")) {
