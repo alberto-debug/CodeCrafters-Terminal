@@ -105,7 +105,7 @@ public class Main {
     private static void executeProgram(File programFile, String[] arguments) {
         try {
             String[] commandWithArgs = new String[arguments.length + 1];
-            commandWithArgs[0] = programFile.getAbsolutePath(); // Use full path
+            commandWithArgs[0] = programFile.getCanonicalPath(); // Use full path
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
 
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
