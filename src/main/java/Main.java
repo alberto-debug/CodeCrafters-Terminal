@@ -1,112 +1,84 @@
 
 import java.io.*;
-import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class Main {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
-        // Initialize the current working directory
-        String currentDirectory = Paths.get("").toAbsolutePath().toString();
+        // Inicialize o diretório atual como uma variável rastreável
+        String currentDirectory = System.getProperty("user.dir");
 
         while (true) {
-
             System.out.print("$ ");
 
             Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine();
 
+            // Comando pwd: imprime o diretório atual
             if (input.equals("pwd")) {
-
                 System.out.println(currentDirectory);
                 continue;
             }
 
-            // Handle 'exit 0' command
+            // Comando exit: encerra o programa
             if (input.equals("exit 0")) {
                 break;
             }
 
-            // Handle 'echo' command
+            // Comando echo: exibe o texto fornecido
             if (input.startsWith("echo")) {
                 System.out.println(input.substring(5));
-            }
-            // Handle 'type' command
-            else if (input.startsWith("type")) {
-                String command = input.substring(5).trim(); // Extract the command after 'type'
-
-                // Check if the command is a built-in command
-                if (command.equals("echo") || command.equals("exit") || command.equals("type")
-                        || command.equals("pwd")) {
-                    System.out.println(command + " is a shell builtin");
-                }
-                // Search for executable in the PATH
-                else {
-                    String path = System.getenv("PATH"); // Get the PATH environment variable
-                    String[] directories = path.split(":"); // Split PATH into directories
-
-                    boolean found = false;
-                    for (String dir : directories) {
-                        File file = new File(dir, command); // Create a File object in each directory
-                        if (file.exists() && file.canExecute()) { // Check if file exists and is executable
-                            System.out.println(command + " is " + dir + "/" + command);
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if (!found) {
-                        System.out.println(command + ": not found");
-                    }
-                }
+                continue;
             }
 
-            else if (input.startsWith("cd ")) {
+            // Comando cd: altera o diretório atual
+            if (input.startsWith("cd ")) {
                 String path = input.substring(3).trim();
                 File directory;
 
+                // Substitui '~' pelo diretório do usuário
                 if (path.startsWith("~")) {
                     String homeDirectory = System.getProperty("user.home");
                     path = path.replaceFirst("~", homeDirectory);
                 }
 
-                if (path.startsWith("./") || path.startsWith("../")) {
-                    directory = new File(System.getProperty("user.dir"), path);
-                } else {
-                    directory = new File(path);
-                }
+                // Resolve caminhos relativos e absolutos
+                directory = new File(currentDirectory, path).getAbsoluteFile();
 
                 try {
-                    // Verifica e resolve o caminho canônico
+                    // Verifica se o diretório existe e é válido
                     if (directory.exists() && directory.isDirectory()) {
-                        System.setProperty("user.dir", directory.getCanonicalPath());
+                        currentDirectory = directory.getCanonicalPath();
                     } else {
                         System.out.println("cd: " + path + ": No such file or directory");
                     }
                 } catch (IOException e) {
-                    System.err.println("Erro ao resolver o caminho canônico: " + e.getMessage());
+                    System.err.println("Erro ao resolver o caminho: " + e.getMessage());
                 }
+                continue;
             }
-            // Handle running an external program with arguments
-            else {
-                String[] parts = input.split(" ");
-                String command = parts[0]; // Extract the command (program name)
-                String[] arguments = new String[parts.length - 1]; // Extract the arguments
 
-                // Populate arguments array
-                System.arraycopy(parts, 1, arguments, 0, parts.length - 1);
+            // Comando type: verifica se é um comando embutido ou um executável no PATH
+            if (input.startsWith("type ")) {
+                String command = input.substring(5).trim();
 
-                // Search for the executable in the PATH
+                // Comandos embutidos
+                if (command.equals("echo") || command.equals("exit") || command.equals("type") || command.equals("pwd") || command.equals("cd")) {
+                    System.out.println(command + " is a shell builtin");
+                    continue;
+                }
+
+                // Procura executáveis no PATH
                 String path = System.getenv("PATH");
                 String[] directories = path.split(":");
+
                 boolean found = false;
                 for (String dir : directories) {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
+                        System.out.println(command + " is " + dir + "/" + command);
                         found = true;
-                        // Execute the external program with arguments
-                        executeProgram(file, arguments);
                         break;
                     }
                 }
@@ -114,34 +86,55 @@ public class Main {
                 if (!found) {
                     System.out.println(command + ": not found");
                 }
+                continue;
+            }
+
+            // Tenta executar um programa externo
+            String[] parts = input.split(" ");
+            String command = parts[0];
+            String[] arguments = new String[parts.length - 1];
+            System.arraycopy(parts, 1, arguments, 0, arguments.length);
+
+            // Procura o executável no PATH
+            String path = System.getenv("PATH");
+            String[] directories = path.split(":");
+            boolean found = false;
+
+            for (String dir : directories) {
+                File file = new File(dir, command);
+                if (file.exists() && file.canExecute()) {
+                    found = true;
+                    executeProgram(file, arguments);
+                    break;
+                }
+            }
+
+            if (!found) {
+                System.out.println(command + ": not found");
             }
         }
     }
 
-    // Method to execute the program with the given arguments
+    // Método para executar um programa com argumentos
     private static void executeProgram(File programFile, String[] arguments) {
         try {
-            // Combine the program path with arguments into a single array
+            // Combina o caminho do programa com os argumentos
             String[] commandWithArgs = new String[arguments.length + 1];
-            String programName = programFile.getName(); // Extract just the name
-            commandWithArgs[0] = programName; // Use the program name only
-            System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length); // Copy the arguments
+            commandWithArgs[0] = programFile.getAbsolutePath();
+            System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
 
-            // Create a ProcessBuilder with the command and arguments
-            ProcessBuilder processBuilder = new ProcessBuilder();
-            processBuilder.command(commandWithArgs); // Pass the full command with arguments
-
-            // Start the process and capture the output
+            // Executa o programa
+            ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
+            processBuilder.redirectErrorStream(true);
             Process process = processBuilder.start();
 
-            // Get the program's output
+            // Captura a saída do programa
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
                 System.out.println(line);
             }
 
-            // Wait for the process to finish
             process.waitFor();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
