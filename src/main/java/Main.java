@@ -65,12 +65,25 @@ public class Main {
             else if (input.startsWith("cd ")) {
 
                 String path = input.substring(3).trim();
-                File directory = new File(path);
+                File directory;
+
+                if (input.startsWith("~")) {
+                    String homeDirectory = System.getProperty("user.home");
+                    path = path.replaceFirst("~", homeDirectory);
+                }
+
+                if (path.startsWith("./") || path.startsWith("../")) {
+                    directory = new File(System.getProperty("user.dir"), path);
+                } else {
+                    directory = new File(path);
+                }
 
                 if (directory.exists() && directory.isDirectory()) {
                     currentDirectory = directory.getAbsolutePath();
                     System.setProperty("user.dir", currentDirectory);
-                } else {
+                }
+
+                else {
                     System.out.println("cd: " + path + ": No such file or directory");
                 }
 
