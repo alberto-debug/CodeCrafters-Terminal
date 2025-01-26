@@ -22,7 +22,7 @@ public class Main {
             // Handle 'type' command
             else if (input.startsWith("type")) {
                 String command = input.substring(5).trim(); // Extract the command after 'type'
-                if (command.equals("echo") || command.equals("exit")) {
+                if (command.equals("echo") || command.equals("exit") || command.equals("type")) {
                     System.out.println(command + " is a shell builtin");
                 } else {
                     System.out.println(command + ": not found");
