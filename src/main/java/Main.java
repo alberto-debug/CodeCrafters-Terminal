@@ -21,7 +21,7 @@ public class Main {
             }
 
             // Handle 'exit 0' command
-            else if (input.equals("exit 0")) {
+            if (input.equals("exit 0")) {
                 break;
             }
 
