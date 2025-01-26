@@ -8,91 +8,125 @@ public class Main {
     public static void main(String[] args) throws Exception {
 
         // Initialize the current working directory
-        String currentDirectory = System.getProperty("user.dir");
-
-        Scanner scanner = new Scanner(System.in);
+        String currentDirectory = Paths.get("").toAbsolutePath().toString();
 
         while (true) {
+
             System.out.print("$ ");
+
+            Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine().trim();
 
-            // Handle 'pwd' command
+            if (input.isEmpty()) {
+                continue; // Skip empty input
+            }
+
             if (input.equals("pwd")) {
                 System.out.println(currentDirectory);
                 continue;
             }
 
-            // Handle 'exit 0' command
             if (input.equals("exit 0")) {
                 break;
             }
 
-            // Handle 'cd' command
-            if (input.startsWith("cd ")) {
-                String path = input.substring(3).trim();
-                String newDirectory;
-
-                // Handle '~' for the home directory
-                if (path.equals("~")) {
-                    newDirectory = System.getProperty("user.home");
-                }
-                // Handle relative paths like './' and '../'
-                else if (path.startsWith("./") || path.startsWith("../")) {
-                    newDirectory = Paths.get(currentDirectory, path).normalize().toString();
-                }
-                // Handle absolute paths
-                else {
-                    newDirectory = path;
-                }
-
-                File directory = new File(newDirectory);
-
-                if (directory.exists() && directory.isDirectory()) {
-                    try {
-                        currentDirectory = directory.getCanonicalPath();
-                    } catch (IOException e) {
-                        System.err.println("Error resolving directory: " + e.getMessage());
-                    }
+            if (input.startsWith("echo")) {
+                System.out.println(input.substring(5));
+            } else if (input.startsWith("type")) {
+                String command = input.substring(5).trim();
+                if (command.equals("echo") || command.equals("exit") || command.equals("type") || command.equals("pwd")) {
+                    System.out.println(command + " is a shell builtin");
                 } else {
-                    System.out.println("cd: " + path + ": No such file or directory");
+                    String path = System.getenv("PATH");
+                    String[] directories = path.split(File.pathSeparator);
+                    boolean found = false;
+                    for (String dir : directories) {
+                        File file = new File(dir, command);
+                        if (file.exists() && file.canExecute()) {
+                            System.out.println(command + " is " + dir + "/" + command);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        System.out.println(command + ": not found");
+                    }
                 }
-                continue;
+            } else if (input.startsWith("cd ")) {
+                String path = input.substring(3).trim();
+                File directory;
+
+                if (path.startsWith("~")) {
+                    String homeDirectory = System.getProperty("user.home");
+                    path = path.replaceFirst("~", homeDirectory);
+                }
+
+                if (path.startsWith("./") || path.startsWith("../")) {
+                    directory = new File(currentDirectory, path);
+                } else {
+                    directory = new File(path);
+                }
+
+                try {
+                    if (directory.exists() && directory.isDirectory()) {
+                        currentDirectory = directory.getCanonicalPath();
+                        System.setProperty("user.dir", currentDirectory);
+                    } else {
+                        System.out.println("cd: " + path + ": No such file or directory");
+                    }
+                } catch (IOException e) {
+                    System.err.println("Error resolving path: " + e.getMessage());
+                }
+            } else {
+                String[] parts = input.split(" ");
+                String command = parts[0];
+                String[] arguments = new String[parts.length - 1];
+                System.arraycopy(parts, 1, arguments, 0, parts.length - 1);
+
+                String path = System.getenv("PATH");
+                String[] directories = path.split(File.pathSeparator);
+                boolean found = false;
+                for (String dir : directories) {
+                    File file = new File(dir, command);
+                    if (file.exists() && file.canExecute()) {
+                        found = true;
+                        executeProgram(file, arguments);
+                        break;
+                    }
+                }
+                if (!found) {
+                    System.out.println(command + ": not found");
+                }
             }
-
-            // Handle unknown commands
-            System.out.println(input + ": command not found");
         }
-
-        scanner.close();
     }
 
-    // Method to execute the program with the given arguments
     private static void executeProgram(File programFile, String[] arguments) {
         try {
-            // Combine the program path with arguments into a single array
             String[] commandWithArgs = new String[arguments.length + 1];
-            String programName = programFile.getName(); // Extract just the name
-            commandWithArgs[0] = programName; // Use the program name only
-            System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length); // Copy the arguments
+            commandWithArgs[0] = programFile.getAbsolutePath(); // Use full path
+            System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
 
-            // Create a ProcessBuilder with the command and arguments
-            ProcessBuilder processBuilder = new ProcessBuilder();
-            processBuilder.command(commandWithArgs); // Pass the full command with arguments
-
-            // Start the process and capture the output
+            ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
+            processBuilder.directory(new File(System.getProperty("user.dir"))); // Set working directory
             Process process = processBuilder.start();
 
-            // Get the program's output
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
             String line;
             while ((line = reader.readLine()) != null) {
                 System.out.println(line);
             }
 
-            // Wait for the process to finish
+            String errorLine;
+            while ((errorLine = errorReader.readLine()) != null) {
+                System.err.println(errorLine);
+            }
+
             process.waitFor();
         } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            System.err.println("Error executing program: " + e.getMessage());
         }
     }
 }
