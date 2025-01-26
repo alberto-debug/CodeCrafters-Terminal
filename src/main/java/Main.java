@@ -29,7 +29,7 @@ public class Main {
                 // Check if the command is a built-in command
                 if (command.equals("echo") || command.equals("exit")) {
                     System.out.println(command + " is a shell builtin");
-                } 
+                }
                 // Search for executable in the PATH
                 else {
                     String path = System.getenv("PATH"); // Get the PATH environment variable
@@ -85,7 +85,8 @@ public class Main {
         try {
             // Combine the program path with arguments into a single array
             String[] commandWithArgs = new String[arguments.length + 1];
-            commandWithArgs[0] = programFile.getAbsolutePath(); // The program file path
+            String programName = programFile.getName(); // Extract just the name
+            commandWithArgs[0] = programName; // Use the program name only
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length); // Copy the arguments
 
             // Create a ProcessBuilder with the command and arguments
@@ -94,7 +95,7 @@ public class Main {
 
             // Start the process and capture the output
             Process process = processBuilder.start();
-            
+
             // Get the program's output
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
