@@ -12,14 +12,26 @@ public class Main {
             Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine();
 
-            if (input.equals("exit 0")){
+            if (input.equals("exit 0")) {
                 break;
             }
 
-            if (input.startsWith("echo")){
+            if (input.startsWith("echo")) {
                 System.out.println(input.substring(5));
-            }else {
-            System.out.println(input + ": command not found");
+            }
+            // Handle 'type' command
+            else if (input.startsWith("type")) {
+                String command = input.substring(5).trim(); // Extract the command after 'type'
+                if (command.equals("echo") || command.equals("exit")) {
+                    System.out.println(command + " is a shell builtin");
+                } else {
+                    System.out.println(command + ": not found");
+                }
+            }
+            // Handle unrecognized command
+
+            else {
+                System.out.println(input + ": command not found");
 
             }
         }
