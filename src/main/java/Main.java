@@ -1,5 +1,6 @@
 
 import java.io.*;
+import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class Main {
@@ -13,8 +14,14 @@ public class Main {
             Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine();
 
+            if (input.equals("pwd")) {
+
+                String currentDirectory = Paths.get("").toAbsolutePath().toString();
+                System.out.println(currentDirectory);
+            }
+
             // Handle 'exit 0' command
-            if (input.equals("exit 0")) {
+            else if (input.equals("exit 0")) {
                 break;
             }
 
