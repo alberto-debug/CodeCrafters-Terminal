@@ -27,7 +27,7 @@ public class Main {
                 String command = input.substring(5).trim(); // Extract the command after 'type'
 
                 // Check if the command is a built-in command
-                if (command.equals("echo") || command.equals("exit")) {
+                if (command.equals("echo") || command.equals("exit") || command.equals("type")) {
                     System.out.println(command + " is a shell builtin");
                 }
                 // Search for executable in the PATH
