@@ -34,7 +34,8 @@ public class Main {
                 System.out.println(input.substring(5));
             } else if (input.startsWith("type")) {
                 String command = input.substring(5).trim();
-                if (command.equals("echo") || command.equals("exit") || command.equals("type") || command.equals("pwd")) {
+                if (command.equals("echo") || command.equals("exit") || command.equals("type")
+                        || command.equals("pwd")) {
                     System.out.println(command + " is a shell builtin");
                 } else {
                     String path = System.getenv("PATH");
@@ -56,7 +57,7 @@ public class Main {
                 String path = input.substring(3).trim();
                 File directory;
 
-                if (path.startsWith("~")) {
+                if (path.contains("~")) {
                     String homeDirectory = System.getProperty("user.home");
                     path = path.replaceFirst("~", homeDirectory);
                 }
