@@ -58,7 +58,7 @@ public class Main {
                 File directory;
 
                 if (path.contains("~")) {
-                    String homeDirectory = System.getProperty("user.home");
+                    String homeDirectory = System.getProperty("HOME");
                     path = path.replaceFirst("~", homeDirectory);
                 }
 
