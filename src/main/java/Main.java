@@ -9,5 +9,7 @@ public class Main {
         String input = scanner.nextLine();
 
         System.out.println(input + " : command no found");
+
+        
     }
 }
