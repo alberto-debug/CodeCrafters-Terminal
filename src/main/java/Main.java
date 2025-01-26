@@ -63,11 +63,10 @@ public class Main {
             }
 
             else if (input.startsWith("cd ")) {
-
                 String path = input.substring(3).trim();
                 File directory;
 
-                if (input.startsWith("~")) {
+                if (path.startsWith("~")) {
                     String homeDirectory = System.getProperty("user.home");
                     path = path.replaceFirst("~", homeDirectory);
                 }
@@ -78,17 +77,18 @@ public class Main {
                     directory = new File(path);
                 }
 
-                if (directory.exists() && directory.isDirectory()) {
-                    currentDirectory = directory.getAbsolutePath();
-                    System.setProperty("user.dir", currentDirectory);
+                try {
+                    // Verifica e resolve o caminho canônico
+                    if (directory.exists() && directory.isDirectory()) {
+                        System.setProperty("user.dir", directory.getCanonicalPath());
+                        System.out.println(directory.getCanonicalPath());
+                    } else {
+                        System.out.println("cd: " + path + ": No such file or directory");
+                    }
+                } catch (IOException e) {
+                    System.err.println("Erro ao resolver o caminho canônico: " + e.getMessage());
                 }
-
-                else {
-                    System.out.println("cd: " + path + ": No such file or directory");
-                }
-
             }
-
             // Handle running an external program with arguments
             else {
                 String[] parts = input.split(" ");
