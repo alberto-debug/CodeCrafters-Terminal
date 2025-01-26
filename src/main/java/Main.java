@@ -5,18 +5,19 @@ import java.util.Scanner;
 
 public class Main {
 
-    public static void main(String[] args) throws Exception {
+    // Variable to store the current working directory
+    private static String currentDirectory = Paths.get("").toAbsolutePath().toString();
+
+    public static void main(String[] args) {
 
         while (true) {
-
             System.out.print("$ ");
 
             Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine();
 
+            // Handle 'pwd' command
             if (input.equals("pwd")) {
-
-                String currentDirectory = Paths.get("").toAbsolutePath().toString();
                 System.out.println(currentDirectory);
                 continue;
             }
@@ -29,25 +30,24 @@ public class Main {
             // Handle 'echo' command
             if (input.startsWith("echo")) {
                 System.out.println(input.substring(5));
+                continue;
             }
+
             // Handle 'type' command
             else if (input.startsWith("type")) {
-                String command = input.substring(5).trim(); // Extract the command after 'type'
+                String command = input.substring(5).trim();
 
                 // Check if the command is a built-in command
-                if (command.equals("echo") || command.equals("exit") || command.equals("type")
-                        || command.equals("pwd")) {
+                if (command.equals("echo") || command.equals("exit") || command.equals("type") || command.equals("pwd") || command.equals("cd")) {
                     System.out.println(command + " is a shell builtin");
-                }
-                // Search for executable in the PATH
-                else {
-                    String path = System.getenv("PATH"); // Get the PATH environment variable
-                    String[] directories = path.split(":"); // Split PATH into directories
+                } else {
+                    String path = System.getenv("PATH");
+                    String[] directories = path.split(":");
 
                     boolean found = false;
                     for (String dir : directories) {
-                        File file = new File(dir, command); // Create a File object in each directory
-                        if (file.exists() && file.canExecute()) { // Check if file exists and is executable
+                        File file = new File(dir, command);
+                        if (file.exists() && file.canExecute()) {
                             System.out.println(command + " is " + dir + "/" + command);
                             found = true;
                             break;
@@ -58,25 +58,39 @@ public class Main {
                         System.out.println(command + ": not found");
                     }
                 }
+                continue;
             }
+
+            // Handle 'cd' command
+            else if (input.startsWith("cd ")) {
+                String path = input.substring(3).trim();
+                File directory = new File(path);
+
+                if (directory.exists() && directory.isDirectory()) {
+                    currentDirectory = directory.getAbsolutePath();
+                    System.setProperty("user.dir", currentDirectory); // Update system property
+                } else {
+                    System.out.println("cd: " + path + ": No such file or directory");
+                }
+                continue;
+            }
+
             // Handle running an external program with arguments
             else {
                 String[] parts = input.split(" ");
-                String command = parts[0]; // Extract the command (program name)
-                String[] arguments = new String[parts.length - 1]; // Extract the arguments
+                String command = parts[0];
+                String[] arguments = new String[parts.length - 1];
 
-                // Populate arguments array
                 System.arraycopy(parts, 1, arguments, 0, parts.length - 1);
 
-                // Search for the executable in the PATH
                 String path = System.getenv("PATH");
                 String[] directories = path.split(":");
                 boolean found = false;
+
                 for (String dir : directories) {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
                         found = true;
-                        // Execute the external program with arguments
                         executeProgram(file, arguments);
                         break;
                     }
@@ -92,27 +106,23 @@ public class Main {
     // Method to execute the program with the given arguments
     private static void executeProgram(File programFile, String[] arguments) {
         try {
-            // Combine the program path with arguments into a single array
             String[] commandWithArgs = new String[arguments.length + 1];
-            String programName = programFile.getName(); // Extract just the name
-            commandWithArgs[0] = programName; // Use the program name only
-            System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length); // Copy the arguments
+            commandWithArgs[0] = programFile.getAbsolutePath();
+            System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
 
-            // Create a ProcessBuilder with the command and arguments
-            ProcessBuilder processBuilder = new ProcessBuilder();
-            processBuilder.command(commandWithArgs); // Pass the full command with arguments
+            ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
 
-            // Start the process and capture the output
+            // Redirect error stream to standard output
+            processBuilder.redirectErrorStream(true);
+
             Process process = processBuilder.start();
 
-            // Get the program's output
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
                 System.out.println(line);
             }
 
-            // Wait for the process to finish
             process.waitFor();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
