@@ -18,6 +18,7 @@ public class Main {
 
                 String currentDirectory = Paths.get("").toAbsolutePath().toString();
                 System.out.println(currentDirectory);
+                continue;
             }
 
             // Handle 'exit 0' command
@@ -34,8 +35,7 @@ public class Main {
                 String command = input.substring(5).trim(); // Extract the command after 'type'
 
                 // Check if the command is a built-in command
-                if (command.equals("echo") || command.equals("exit") || command.equals("type")
-                        || command.equals("pwd")) {
+                if (command.equals("echo") || command.equals("exit") || command.equals("type")) {
                     System.out.println(command + " is a shell builtin");
                 }
                 // Search for executable in the PATH
