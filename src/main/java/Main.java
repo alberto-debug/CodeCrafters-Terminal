@@ -81,7 +81,6 @@ public class Main {
                     // Verifica e resolve o caminho canônico
                     if (directory.exists() && directory.isDirectory()) {
                         System.setProperty("user.dir", directory.getCanonicalPath());
-                        System.out.println(directory.getCanonicalPath());
                     } else {
                         System.out.println("cd: " + path + ": No such file or directory");
                     }
