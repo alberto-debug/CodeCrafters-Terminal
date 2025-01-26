@@ -1,4 +1,5 @@
 import java.awt.*;
+import java.io.File;
 import java.util.Scanner;
 
 public class Main {
@@ -25,8 +26,25 @@ public class Main {
                 if (command.equals("echo") || command.equals("exit") || command.equals("type")) {
                     System.out.println(command + " is a shell builtin");
                 } else {
-                    System.out.println(command + ": not found");
+
+                    String path = System.getenv("PATH");
+                    String[] directories = path.split(":");
+
+                    boolean found = false;
+                    for (String dir : directories) {
+                        File file = new File(dir, command);
+                        if (file.exists() && file.canExecute()) {
+                            System.out.println(command + " is " + dir + "/" + command);
+                            found = true;
+                            break;
+
+                        }
+                    }
+                    if (!found) {
+                        System.out.println(command + ": not found");
+                    }
                 }
+
             }
             // Handle unrecognized command
 
