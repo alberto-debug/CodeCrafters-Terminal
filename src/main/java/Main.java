@@ -34,9 +34,8 @@ public class Main {
             }
 
             if (input.startsWith("echo")) {
-                String command = input.substring(5).trim();
+                String command = input.substring(4).trim();
                 command = handleSingleQuotes(command);
-                command = command.replaceAll("\\s+", " ");
                 System.out.println(command);
             } else if (input.startsWith("type")) {
                 String command = input.substring(5).trim();
@@ -111,7 +110,7 @@ public class Main {
     public static String handleSingleQuotes(String input) {
         if (input.startsWith("'") && input.endsWith("'")) {
 
-            input = input.substring(1, input.length() - 1);
+            input = input.substring(1);
 
         }
         return input;
