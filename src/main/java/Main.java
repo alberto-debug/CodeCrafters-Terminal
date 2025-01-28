@@ -110,6 +110,7 @@ public class Main {
     public static String handleSingleQuotes(String input) {
         if (input.startsWith("'") && input.endsWith("'")) {
             // // Remove todas as aspas extras entre as palavras
+            return input.substring(1, input.length() - 1);
         }
 
         return input;
