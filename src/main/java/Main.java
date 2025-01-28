@@ -3,12 +3,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Main {
-
     public static void main(String[] args) throws Exception {
-        // Initialize the current working directory
         String currentDirectory = Paths.get("").toAbsolutePath().toString();
 
         while (true) {
@@ -18,7 +18,7 @@ public class Main {
             String input = scanner.nextLine().trim();
 
             if (input.isEmpty()) {
-                continue; // Skip empty input
+                continue;
             }
 
             if (input.equals("pwd")) {
@@ -30,36 +30,41 @@ public class Main {
                 break;
             }
 
-            if (input.startsWith("echo")) {
-                String arguments = input.substring(4).trim();
-                if (arguments.isEmpty()) {
+            // Parse command and arguments while preserving quotes
+            String[] commandAndArgs = parseCommandLine(input);
+            String command = commandAndArgs[0];
+            String[] arguments = new String[commandAndArgs.length - 1];
+            System.arraycopy(commandAndArgs, 1, arguments, 0, commandAndArgs.length - 1);
+
+            if (command.equals("echo")) {
+                if (arguments.length == 0) {
                     System.out.println();
                 } else {
-                    System.out.println(processEchoArguments(arguments));
+                    System.out.println(String.join(" ", arguments));
                 }
-            } else if (input.startsWith("type")) {
-                String command = input.substring(5).trim();
-                if (command.equals("echo") || command.equals("exit") || command.equals("type")
-                        || command.equals("pwd")) {
-                    System.out.println(command + " is a shell builtin");
+            } else if (command.equals("type")) {
+                String typeArg = arguments.length > 0 ? arguments[0] : "";
+                if (typeArg.equals("echo") || typeArg.equals("exit") || typeArg.equals("type")
+                        || typeArg.equals("pwd")) {
+                    System.out.println(typeArg + " is a shell builtin");
                 } else {
                     String path = System.getenv("PATH");
                     String[] directories = path.split(File.pathSeparator);
                     boolean found = false;
                     for (String dir : directories) {
-                        File file = new File(dir, command);
+                        File file = new File(dir, typeArg);
                         if (file.exists() && file.canExecute()) {
-                            System.out.println(command + " is " + dir + "/" + command);
+                            System.out.println(typeArg + " is " + dir + "/" + typeArg);
                             found = true;
                             break;
                         }
                     }
                     if (!found) {
-                        System.out.println(command + ": not found");
+                        System.out.println(typeArg + ": not found");
                     }
                 }
-            } else if (input.startsWith("cd ")) {
-                String path = input.substring(3).trim();
+            } else if (command.equals("cd")) {
+                String path = arguments.length > 0 ? arguments[0] : "";
                 File directory;
 
                 if (path.contains("~")) {
@@ -84,11 +89,6 @@ public class Main {
                     System.err.println("Error resolving path: " + e.getMessage());
                 }
             } else {
-                String[] parts = input.split(" ");
-                String command = parts[0];
-                String[] arguments = new String[parts.length - 1];
-                System.arraycopy(parts, 1, arguments, 0, parts.length - 1);
-
                 String path = System.getenv("PATH");
                 String[] directories = path.split(File.pathSeparator);
                 boolean found = false;
@@ -107,9 +107,9 @@ public class Main {
         }
     }
 
-    private static String processEchoArguments(String input) {
-        StringBuilder result = new StringBuilder();
-        StringBuilder currentWord = new StringBuilder();
+    private static String[] parseCommandLine(String input) {
+        List<String> tokens = new ArrayList<>();
+        StringBuilder currentToken = new StringBuilder();
         boolean inQuotes = false;
 
         for (int i = 0; i < input.length(); i++) {
@@ -117,31 +117,21 @@ public class Main {
 
             if (c == '\'') {
                 inQuotes = !inQuotes;
-                continue;
-            }
-
-            if (!inQuotes && Character.isWhitespace(c)) {
-                if (currentWord.length() > 0) {
-                    if (result.length() > 0) {
-                        result.append(" ");
-                    }
-                    result.append(currentWord);
-                    currentWord.setLength(0);
+            } else if (!inQuotes && Character.isWhitespace(c)) {
+                if (currentToken.length() > 0) {
+                    tokens.add(currentToken.toString());
+                    currentToken.setLength(0);
                 }
             } else {
-                currentWord.append(c);
+                currentToken.append(c);
             }
         }
 
-        // Handle the last word
-        if (currentWord.length() > 0) {
-            if (result.length() > 0) {
-                result.append(" ");
-            }
-            result.append(currentWord);
+        if (currentToken.length() > 0) {
+            tokens.add(currentToken.toString());
         }
 
-        return result.toString();
+        return tokens.toArray(new String[0]);
     }
 
     private static void executeProgram(File programFile, String[] arguments) {
@@ -149,7 +139,7 @@ public class Main {
             String programName = programFile.getName();
 
             String[] commandWithArgs = new String[arguments.length + 1];
-            commandWithArgs[0] = programName;
+            commandWithArgs[0] = programFile.getAbsolutePath(); // Use full path for execution
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
 
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
