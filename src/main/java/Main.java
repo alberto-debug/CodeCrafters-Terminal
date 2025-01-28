@@ -112,9 +112,6 @@ public class Main {
             input = input.substring(1, input.length() - 1); // Remove as aspas simples
         }
 
-        // Substitui múltiplos espaços por um único espaço
-        input = input.replaceAll("\\s+", " ").trim();
-
         // Remove todas as aspas extras entre as palavras
         input = input.replaceAll("'", "");
 
