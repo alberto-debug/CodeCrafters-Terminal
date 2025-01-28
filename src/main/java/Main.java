@@ -3,6 +3,9 @@ import java.io.*;
 import java.nio.file.Paths;
 import java.util.Scanner;
 
+import jdk.internal.util.xml.impl.Input;
+import jdk.javadoc.internal.doclets.formats.html.markup.Comment;
+
 public class Main {
 
     public static void main(String[] args) throws Exception {
@@ -31,7 +34,9 @@ public class Main {
             }
 
             if (input.startsWith("echo")) {
-                System.out.println(input.substring(5));
+                String command = input.substring(5);
+                command = handleSingleQuotes(command);
+                System.out.println(command);
             } else if (input.startsWith("type")) {
                 String command = input.substring(5).trim();
                 if (command.equals("echo") || command.equals("exit") || command.equals("type")
@@ -100,6 +105,15 @@ public class Main {
                 }
             }
         }
+    }
+
+    public static String handleSingleQuotes(String input) {
+        if (input.startsWith("'") && input.endsWith("'")) {
+
+            input = input.substring(1, input.length() - 1);
+
+        }
+        return input;
     }
 
     private static void executeProgram(File programFile, String[] arguments) {
