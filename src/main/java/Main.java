@@ -138,12 +138,18 @@ public class Main {
         try {
             String programName = programFile.getName();
 
+            // Create command array with program name (not full path) as first argument
             String[] commandWithArgs = new String[arguments.length + 1];
-            commandWithArgs[0] = programFile.getAbsolutePath(); // Use full path for execution
+            commandWithArgs[0] = programFile.getAbsolutePath(); // Use full path for ProcessBuilder
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
 
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
+
+            // Set program name in environment variable for arg0
+            processBuilder.environment().put("_", programName);
+
             processBuilder.directory(new File(System.getProperty("user.dir")));
+
             Process process = processBuilder.start();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
