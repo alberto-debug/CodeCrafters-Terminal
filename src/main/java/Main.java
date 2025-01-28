@@ -113,7 +113,7 @@ public class Main {
             return input.substring(1, input.length() - 1);
         }
 
-        return input;
+        return input.replaceAll("\\s+", " ");
     }
 
     private static void executeProgram(File programFile, String[] arguments) {
