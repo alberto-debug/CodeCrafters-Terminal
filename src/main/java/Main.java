@@ -111,7 +111,6 @@ public class Main {
         if (input.startsWith("'") && input.endsWith("'")) {
             input = input.substring(1, input.length() - 1); // Remove as aspas simples
                                                             // // Remove todas as aspas extras entre as palavras
-            input = input.replaceAll("'", "");
         }
 
         return input;
