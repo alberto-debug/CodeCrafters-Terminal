@@ -34,7 +34,7 @@ public class Main {
             }
 
             if (input.startsWith("echo")) {
-                String command = input.substring(7);
+                String command = input.substring(5);
                 command = handleSingleQuotes(command);
                 System.out.println(command);
             } else if (input.startsWith("type")) {
