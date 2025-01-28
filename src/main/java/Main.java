@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -9,12 +8,10 @@ import java.util.Scanner;
 public class Main {
 
     public static void main(String[] args) throws Exception {
-
         // Initialize the current working directory
         String currentDirectory = Paths.get("").toAbsolutePath().toString();
 
         while (true) {
-
             System.out.print("$ ");
 
             Scanner scanner = new Scanner(System.in);
@@ -34,9 +31,12 @@ public class Main {
             }
 
             if (input.startsWith("echo")) {
-                String command = input.substring(5);
-                command = handleSingleQuotes(command);
-                System.out.println(command);
+                String arguments = input.substring(4).trim();
+                if (arguments.isEmpty()) {
+                    System.out.println();
+                } else {
+                    System.out.println(processEchoArguments(arguments));
+                }
             } else if (input.startsWith("type")) {
                 String command = input.substring(5).trim();
                 if (command.equals("echo") || command.equals("exit") || command.equals("type")
@@ -107,26 +107,53 @@ public class Main {
         }
     }
 
-    public static String handleSingleQuotes(String input) {
-        if (input.startsWith("'") && input.endsWith("'")) {
-            // // Remove todas as aspas extras entre as palavras
-            return input.substring(1, input.length() - 1);
+    private static String processEchoArguments(String input) {
+        StringBuilder result = new StringBuilder();
+        StringBuilder currentWord = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+
+            if (c == '\'') {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (!inQuotes && Character.isWhitespace(c)) {
+                if (currentWord.length() > 0) {
+                    if (result.length() > 0) {
+                        result.append(" ");
+                    }
+                    result.append(currentWord);
+                    currentWord.setLength(0);
+                }
+            } else {
+                currentWord.append(c);
+            }
         }
 
-        return input.replaceAll("\\s+", " ");
+        // Handle the last word
+        if (currentWord.length() > 0) {
+            if (result.length() > 0) {
+                result.append(" ");
+            }
+            result.append(currentWord);
+        }
+
+        return result.toString();
     }
 
     private static void executeProgram(File programFile, String[] arguments) {
         try {
-            // Obtenha o nome do arquivo (não o caminho completo)
-            String programName = programFile.getName(); // Usa apenas o nome do arquivo
+            String programName = programFile.getName();
 
             String[] commandWithArgs = new String[arguments.length + 1];
-            commandWithArgs[0] = programName; // Usar apenas o nome do executável
+            commandWithArgs[0] = programName;
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
 
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
-            processBuilder.directory(new File(System.getProperty("user.dir"))); // Define o diretório de trabalho
+            processBuilder.directory(new File(System.getProperty("user.dir")));
             Process process = processBuilder.start();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -144,8 +171,7 @@ public class Main {
 
             process.waitFor();
         } catch (IOException | InterruptedException e) {
-            System.err.println("Erro ao executar o programa: " + e.getMessage());
+            System.err.println("Error executing program: " + e.getMessage());
         }
     }
-
 }
