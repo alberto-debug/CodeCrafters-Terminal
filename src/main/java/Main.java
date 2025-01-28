@@ -34,9 +34,8 @@ public class Main {
             }
 
             if (input.startsWith("echo")) {
-                String command = input.substring(4).trim();
-                command = handleSingleQuotes(command);
-                System.out.println(command);
+                String command = input.substring(5); // Remove "echo" do início
+                System.out.println(parseEchoCommand(command));
             } else if (input.startsWith("type")) {
                 String command = input.substring(5).trim();
                 if (command.equals("echo") || command.equals("exit") || command.equals("type")
@@ -107,13 +106,27 @@ public class Main {
         }
     }
 
-    public static String handleSingleQuotes(String input) {
-        if (input.startsWith("'") && input.endsWith("'")) {
+    public static String parseEchoCommand(String input) {
+        StringBuilder result = new StringBuilder();
+        boolean insideQuotes = false;
+        StringBuilder temp = new StringBuilder();
 
-            input = input.substring(6);
-
+        for (char c : input.toCharArray()) {
+            if (c == '\'') {
+                insideQuotes = !insideQuotes; // Alterna entre dentro e fora das aspas
+                if (!insideQuotes) {
+                    result.append(temp); // Adiciona o conteúdo dentro das aspas
+                    temp.setLength(0); // Reseta o buffer temporário
+                }
+            } else if (insideQuotes) {
+                temp.append(c); // Adiciona caracteres dentro das aspas ao buffer
+            } else {
+                result.append(c); // Adiciona caracteres fora das aspas diretamente
+            }
         }
-        return input;
+
+        // Preserva os espaços fora das aspas, mas remove os espaços extras no final
+        return result.toString().replaceAll(" {2,}", " ").trim();
     }
 
     private static void executeProgram(File programFile, String[] arguments) {
@@ -147,5 +160,4 @@ public class Main {
             System.err.println("Erro ao executar o programa: " + e.getMessage());
         }
     }
-
 }
