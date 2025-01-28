@@ -36,6 +36,7 @@ public class Main {
             if (input.startsWith("echo")) {
                 String command = input.substring(5).trim();
                 command = handleSingleQuotes(command);
+                command = command.replaceAll("\\s+", " ");
                 System.out.println(command);
             } else if (input.startsWith("type")) {
                 String command = input.substring(5).trim();
