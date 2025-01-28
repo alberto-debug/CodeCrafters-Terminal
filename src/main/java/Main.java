@@ -110,7 +110,7 @@ public class Main {
     public static String handleSingleQuotes(String input) {
         if (input.startsWith("'") && input.endsWith("'")) {
 
-            input = input.substring(1, input.length() - 0);
+            input = input.substring(1, input.length() - 3);
 
         }
         return input;
