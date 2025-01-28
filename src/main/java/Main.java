@@ -18,7 +18,8 @@ public class Main {
             Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine().trim();
 
-            if (input.isEmpty()) continue;
+            if (input.isEmpty())
+                continue;
 
             if (input.equals("pwd")) {
                 System.out.println(currentDirectory);
@@ -32,6 +33,10 @@ public class Main {
             if (input.startsWith("echo")) {
                 String command = input.substring(5).trim();
                 command = handleSingleQuotes(command);
+
+                if (!command.startsWith("'") && !command.endsWith("'")) {
+                    command = command.replaceAll("\\s+", " ");
+                }
                 System.out.println(command);
             } else if (input.startsWith("type")) {
                 handleTypeCommand(input);
