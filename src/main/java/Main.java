@@ -1,10 +1,10 @@
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.util.Scanner;
-
-import jdk.internal.util.xml.impl.Input;
-import jdk.javadoc.internal.doclets.formats.html.markup.Comment;
 
 public class Main {
 
