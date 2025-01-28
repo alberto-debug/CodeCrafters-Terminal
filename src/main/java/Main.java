@@ -109,13 +109,15 @@ public class Main {
 
     public static String handleSingleQuotes(String input) {
         if (input.startsWith("'") && input.endsWith("'")) {
-
-            input = input.substring(1, input.length() - 1);
-
+            input = input.substring(1, input.length() - 1); // Remove as aspas simples
         }
 
-        // Remove múltiplos espaços internos e mantém apenas um espaço
+        // Substitui múltiplos espaços por um único espaço
         input = input.replaceAll("\\s+", " ").trim();
+
+        // Remove todas as aspas extras entre as palavras
+        input = input.replaceAll("'", "");
+
         return input;
     }
 
