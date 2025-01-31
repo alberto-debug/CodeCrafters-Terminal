@@ -33,7 +33,7 @@ public class Main {
                 if (arguments.length == 0) {
                     System.out.println();
                 } else {
-                    System.out.println(String.join("", arguments)); // Join without spaces
+                    System.out.println(String.join(" ", arguments)); // Join with spaces
                 }
             } else if (command.equals("type")) {
                 String typeArg = arguments.length > 0 ? arguments[0] : "";
