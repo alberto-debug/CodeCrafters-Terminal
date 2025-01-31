@@ -157,7 +157,26 @@ public class Main {
         if (inSingleQuotes || inDoubleQuotes) {
             System.err.println("Warning: Unclosed quote detected.");
         }
-        return tokens.toArray(new String[0]);
+
+        // Merge adjacent quoted strings without spaces
+        List<String> mergedTokens = new ArrayList<>();
+        StringBuilder mergedToken = new StringBuilder();
+        for (String token : tokens) {
+            if (token.startsWith("\"") && token.endsWith("\"")) {
+                mergedToken.append(token.substring(1, token.length() - 1));
+            } else {
+                if (mergedToken.length() > 0) {
+                    mergedTokens.add(mergedToken.toString());
+                    mergedToken.setLength(0);
+                }
+                mergedTokens.add(token);
+            }
+        }
+        if (mergedToken.length() > 0) {
+            mergedTokens.add(mergedToken.toString());
+        }
+
+        return mergedTokens.toArray(new String[0]);
     }
 
     private static String processDoubleQuotedString(String str) {
@@ -176,7 +195,7 @@ public class Main {
                 result.append(c);
             }
         }
-        return result.toString();
+        return "\"" + result.toString() + "\""; // Add back quotes for further processing
     }
 
     private static void executeProgram(File programFile, String[] arguments) {
