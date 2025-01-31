@@ -163,18 +163,30 @@ public class Main {
             System.err.println("Warning: Unclosed quote detected.");
         }
 
-        // Merge adjacent tokens inside double quotes
+        // Merge adjacent quoted tokens without spaces
         List<String> mergedTokens = new ArrayList<>();
         StringBuilder mergedToken = new StringBuilder();
+        boolean lastWasQuoted = false;
+
         for (String token : tokens) {
             if (token.startsWith("\"") && token.endsWith("\"")) {
-                mergedToken.append(token.substring(1, token.length() - 1));
+                if (lastWasQuoted) {
+                    mergedToken.append(token.substring(1, token.length() - 1));
+                } else {
+                    if (mergedToken.length() > 0) {
+                        mergedTokens.add(mergedToken.toString());
+                        mergedToken.setLength(0);
+                    }
+                    mergedToken.append(token.substring(1, token.length() - 1));
+                }
+                lastWasQuoted = true;
             } else {
                 if (mergedToken.length() > 0) {
                     mergedTokens.add(mergedToken.toString());
                     mergedToken.setLength(0);
                 }
                 mergedTokens.add(token);
+                lastWasQuoted = false;
             }
         }
         if (mergedToken.length() > 0) {
