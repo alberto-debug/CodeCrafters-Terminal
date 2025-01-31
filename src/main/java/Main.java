@@ -103,54 +103,85 @@ public class Main {
         StringBuilder currentToken = new StringBuilder();
         boolean inSingleQuotes = false;
         boolean inDoubleQuotes = false;
+
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
+
+            // Handling single quotes
             if (c == '\'') {
                 if (inSingleQuotes) {
                     tokens.add(currentToken.toString());
-                    currentToken.setLength(0); // Clear the buffer
+                    currentToken.setLength(0);
                 } else {
                     if (currentToken.length() > 0) {
                         tokens.add(currentToken.toString());
-                        currentToken.setLength(0); // Clear the buffer
+                        currentToken.setLength(0);
                     }
                 }
                 inSingleQuotes = !inSingleQuotes;
-            } else if (c == '"') {
+            }
+            // Handling double quotes
+            else if (c == '"') {
                 if (inDoubleQuotes) {
                     tokens.add(currentToken.toString());
-                    currentToken.setLength(0); // Clear the buffer
+                    currentToken.setLength(0);
                 } else {
                     if (currentToken.length() > 0) {
                         tokens.add(currentToken.toString());
-                        currentToken.setLength(0); // Clear the buffer
+                        currentToken.setLength(0);
                     }
                 }
                 inDoubleQuotes = !inDoubleQuotes;
-            } else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
+            }
+            // Handle whitespace
+            else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
-                    currentToken.setLength(0); // Clear the buffer for next token
+                    currentToken.setLength(0);
                 }
-            } else {
-                if (inDoubleQuotes && c == '"' && i + 1 < input.length() && input.charAt(i + 1) == '"') {
-                    // Merge adjacent quotes into one token (i.e., "hello""test" becomes
-                    // "hellotest")
-                    currentToken.append('"');
-                    i++; // Skip the next quote
+            }
+            // Handle escaped characters inside double quotes
+            else if (inDoubleQuotes && c == '\\' && i + 1 < input.length()) {
+                char nextChar = input.charAt(i + 1);
+                if (nextChar == '\\' || nextChar == '$' || nextChar == '"') {
+                    currentToken.append(nextChar);
+                    i++;
                 } else {
                     currentToken.append(c);
                 }
+            } else {
+                currentToken.append(c);
             }
         }
+
+        // Add the last token if exists
         if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
         }
+
         if (inSingleQuotes || inDoubleQuotes) {
             System.err.println("Warning: Unclosed quote detected.");
         }
 
-        return tokens.toArray(new String[0]);
+        // Merge adjacent tokens inside double quotes
+        List<String> mergedTokens = new ArrayList<>();
+        StringBuilder mergedToken = new StringBuilder();
+        for (String token : tokens) {
+            if (token.startsWith("\"") && token.endsWith("\"")) {
+                mergedToken.append(token.substring(1, token.length() - 1));
+            } else {
+                if (mergedToken.length() > 0) {
+                    mergedTokens.add(mergedToken.toString());
+                    mergedToken.setLength(0);
+                }
+                mergedTokens.add(token);
+            }
+        }
+        if (mergedToken.length() > 0) {
+            mergedTokens.add(mergedToken.toString());
+        }
+
+        return mergedTokens.toArray(new String[0]);
     }
 
     private static void executeProgram(File programFile, String[] arguments) {
