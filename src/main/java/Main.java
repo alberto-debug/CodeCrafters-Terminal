@@ -106,13 +106,13 @@ public class Main {
             if (c == '\'') {
                 if (inQuotes) {
                     tokens.add(currentToken.toString());
-                    currentToken.setLength(0);
+                    currentToken.setLength(0); // Clear the buffer for next token
                 }
                 inQuotes = !inQuotes;
             } else if (!inQuotes && Character.isWhitespace(c)) {
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
-                    currentToken.setLength(0);
+                    currentToken.setLength(0); // Clear the buffer for next token
                 }
             } else {
                 currentToken.append(c);
