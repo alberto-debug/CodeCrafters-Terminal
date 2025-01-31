@@ -103,68 +103,91 @@ public class Main {
         StringBuilder currentToken = new StringBuilder();
         boolean inSingleQuotes = false;
         boolean inDoubleQuotes = false;
+
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
+
+            // Handling single quotes
             if (c == '\'') {
                 if (inSingleQuotes) {
                     tokens.add(currentToken.toString());
-                    currentToken.setLength(0); // Clear the buffer
+                    currentToken.setLength(0);
                 } else {
                     if (currentToken.length() > 0) {
                         tokens.add(currentToken.toString());
-                        currentToken.setLength(0); // Clear the buffer
+                        currentToken.setLength(0);
                     }
                 }
                 inSingleQuotes = !inSingleQuotes;
-            } else if (c == '"') {
+            }
+            // Handling double quotes
+            else if (c == '"') {
                 if (inDoubleQuotes) {
                     tokens.add(currentToken.toString());
-                    currentToken.setLength(0); // Clear the buffer
+                    currentToken.setLength(0);
                 } else {
                     if (currentToken.length() > 0) {
                         tokens.add(currentToken.toString());
-                        currentToken.setLength(0); // Clear the buffer
+                        currentToken.setLength(0);
                     }
                 }
                 inDoubleQuotes = !inDoubleQuotes;
-            } else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
+            }
+            // Handle whitespace
+            else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
-                    currentToken.setLength(0); // Clear the buffer for next token
+                    currentToken.setLength(0);
                 }
-            } else {
-                if (inDoubleQuotes && c == '\\' && i + 1 < input.length()) {
-                    char nextChar = input.charAt(i + 1);
-                    if (nextChar == '\\' || nextChar == '$' || nextChar == '"') {
-                        currentToken.append(nextChar);
-                        i++; // Skip the next character as it's already processed
-                    } else {
-                        currentToken.append(c);
-                    }
+            }
+            // Handle escaped characters inside double quotes
+            else if (inDoubleQuotes && c == '\\' && i + 1 < input.length()) {
+                char nextChar = input.charAt(i + 1);
+                if (nextChar == '\\' || nextChar == '$' || nextChar == '"') {
+                    currentToken.append(nextChar);
+                    i++;
                 } else {
                     currentToken.append(c);
                 }
+            } else {
+                currentToken.append(c);
             }
         }
+
+        // Add the last token if exists
         if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
         }
+
         if (inSingleQuotes || inDoubleQuotes) {
             System.err.println("Warning: Unclosed quote detected.");
         }
 
-        // Merge adjacent tokens if they are not separated by spaces
+        // Merge adjacent quoted tokens without spaces
         List<String> mergedTokens = new ArrayList<>();
         StringBuilder mergedToken = new StringBuilder();
+        boolean lastWasQuoted = false;
+
         for (String token : tokens) {
             if (token.startsWith("\"") && token.endsWith("\"")) {
-                mergedToken.append(token.substring(1, token.length() - 1));
+                // If the last token was also quoted, concatenate them
+                if (lastWasQuoted) {
+                    mergedToken.append(token.substring(1, token.length() - 1)); // remove quotes and merge
+                } else {
+                    if (mergedToken.length() > 0) {
+                        mergedTokens.add(mergedToken.toString());
+                        mergedToken.setLength(0);
+                    }
+                    mergedToken.append(token.substring(1, token.length() - 1)); // remove quotes and keep
+                }
+                lastWasQuoted = true;
             } else {
                 if (mergedToken.length() > 0) {
                     mergedTokens.add(mergedToken.toString());
                     mergedToken.setLength(0);
                 }
                 mergedTokens.add(token);
+                lastWasQuoted = false;
             }
         }
         if (mergedToken.length() > 0) {
