@@ -100,36 +100,94 @@ public class Main {
     private static String[] parseCommandLine(String input) {
         List<String> tokens = new ArrayList<>();
         StringBuilder currentToken = new StringBuilder();
-        boolean inQuotes = false;
+        boolean inSingleQuotes = false;
+        boolean inDoubleQuotes = false;
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
             if (c == '\'') {
-                inQuotes = !inQuotes; // Toggle the inQuotes flag
-                continue; // Do not append the quote character itself
-            }
-            if (!inQuotes && Character.isWhitespace(c)) {
+                if (inSingleQuotes) {
+                    tokens.add(currentToken.toString());
+                    currentToken.setLength(0); // Clear the buffer
+                } else {
+                    if (currentToken.length() > 0) {
+                        tokens.add(currentToken.toString());
+                        currentToken.setLength(0); // Clear the buffer
+                    }
+                }
+                inSingleQuotes = !inSingleQuotes;
+            } else if (c == '"') {
+                if (inDoubleQuotes) {
+                    tokens.add(processDoubleQuotedString(currentToken.toString()));
+                    currentToken.setLength(0); // Clear the buffer
+                } else {
+                    if (currentToken.length() > 0) {
+                        tokens.add(currentToken.toString());
+                        currentToken.setLength(0); // Clear the buffer
+                    }
+                }
+                inDoubleQuotes = !inDoubleQuotes;
+            } else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0); // Clear the buffer for next token
                 }
             } else {
-                currentToken.append(c);
+                if (inDoubleQuotes && c == '\\' && i + 1 < input.length()) {
+                    char nextChar = input.charAt(i + 1);
+                    if (nextChar == '\\' || nextChar == '$' || nextChar == '"') {
+                        currentToken.append(nextChar);
+                        i++; // Skip the next character as it's already processed
+                    } else {
+                        currentToken.append(c);
+                    }
+                } else {
+                    currentToken.append(c);
+                }
             }
         }
         if (currentToken.length() > 0) {
-            tokens.add(currentToken.toString());
+            if (inDoubleQuotes) {
+                tokens.add(processDoubleQuotedString(currentToken.toString()));
+            } else if (inSingleQuotes) {
+                tokens.add(currentToken.toString());
+            } else {
+                tokens.add(currentToken.toString());
+            }
+        }
+        if (inSingleQuotes || inDoubleQuotes) {
+            System.err.println("Warning: Unclosed quote detected.");
         }
         return tokens.toArray(new String[0]);
+    }
+
+    private static String processDoubleQuotedString(String str) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+            if (c == '\\' && i + 1 < str.length()) {
+                char nextChar = str.charAt(i + 1);
+                if (nextChar == '\\' || nextChar == '$' || nextChar == '"') {
+                    result.append(nextChar);
+                    i++; // Skip the next character as it's already processed
+                } else {
+                    result.append(c);
+                }
+            } else {
+                result.append(c);
+            }
+        }
+        return result.toString();
     }
 
     private static void executeProgram(File programFile, String[] arguments) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
-            commandWithArgs[0] = programFile.getAbsolutePath(); // Use full path for execution
+            commandWithArgs[0] = programName; // Use just the program name for argv[0]
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
             processBuilder.directory(new File(System.getProperty("user.dir")));
+            processBuilder.environment().put("PATH", System.getenv("PATH")); // Ensure PATH is correctly set
             Process process = processBuilder.start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
