@@ -33,7 +33,7 @@ public class Main {
                 if (arguments.length == 0) {
                     System.out.println();
                 } else {
-                    System.out.println(String.join(" ", arguments));
+                    System.out.println(String.join("", arguments)); // Join without spaces
                 }
             } else if (command.equals("type")) {
                 String typeArg = arguments.length > 0 ? arguments[0] : "";
@@ -171,25 +171,6 @@ public class Main {
         }
 
         return mergedTokens.toArray(new String[0]);
-    }
-
-    private static String processDoubleQuotedString(String str) {
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < str.length(); i++) {
-            char c = str.charAt(i);
-            if (c == '\\' && i + 1 < str.length()) {
-                char nextChar = str.charAt(i + 1);
-                if (nextChar == '\\' || nextChar == '$' || nextChar == '"') {
-                    result.append(nextChar);
-                    i++; // Skip the next character as it's already processed
-                } else {
-                    result.append(c);
-                }
-            } else {
-                result.append(c);
-            }
-        }
-        return result.toString();
     }
 
     private static void executeProgram(File programFile, String[] arguments) {
