@@ -126,11 +126,10 @@ public class Main {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
-            commandWithArgs[0] = programName; // Use just the program name for argv[0]
+            commandWithArgs[0] = programFile.getAbsolutePath(); // Use full path for execution
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
             processBuilder.directory(new File(System.getProperty("user.dir")));
-            processBuilder.environment().put("PATH", System.getenv("PATH")); // Ensure PATH is correctly set
             Process process = processBuilder.start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
