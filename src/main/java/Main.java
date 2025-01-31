@@ -97,95 +97,29 @@ public class Main {
         }
     }
 
-private static String[] parseCommandLine(String input) {
-    List<String> tokens = new ArrayList<>();
-    StringBuilder currentToken = new StringBuilder();
-    boolean inSingleQuotes = false;
-    boolean inDoubleQuotes = false;
-    for (int i = 0; i < input.length(); i++) {
-        char c = input.charAt(i);
-        if (c == '\'') {
-            if (inSingleQuotes) {
-                tokens.add(currentToken.toString());
-                currentToken.setLength(0); // Clear the buffer
-            } else {
+    private static String[] parseCommandLine(String input) {
+        List<String> tokens = new ArrayList<>();
+        StringBuilder currentToken = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (c == '\'') {
+                inQuotes = !inQuotes; // Toggle the inQuotes flag
+                continue; // Do not append the quote character itself
+            }
+            if (!inQuotes && Character.isWhitespace(c)) {
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
-                    currentToken.setLength(0); // Clear the buffer
-                }
-            }
-            inSingleQuotes = !inSingleQuotes;
-        } else if (c == '"') {
-            if (inDoubleQuotes) {
-                tokens.add(currentToken.toString());
-                currentToken.setLength(0); // Clear the buffer
-            } else {
-                if (currentToken.length() > 0) {
-                    tokens.add(currentToken.toString());
-                    currentToken.setLength(0); // Clear the buffer
-                }
-            }
-            inDoubleQuotes = !inDoubleQuotes;
-        } else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
-            if (currentToken.length() > 0) {
-                tokens.add(currentToken.toString());
-                currentToken.setLength(0); // Clear the buffer for next token
-            }
-        } else {
-            if (inDoubleQuotes && c == '\\' && i + 1 < input.length()) {
-                char nextChar = input.charAt(i + 1);
-                if (nextChar == '\\' || nextChar == '$' || nextChar == '"') {
-                    currentToken.append(nextChar);
-                    i++; // Skip the next character as it's already processed
-                } else {
-                    currentToken.append(c);
+                    currentToken.setLength(0); // Clear the buffer for next token
                 }
             } else {
                 currentToken.append(c);
             }
         }
-    }
-    if (currentToken.length() > 0) {
-        tokens.add(currentToken.toString());
-    }
-    if (inSingleQuotes || inDoubleQuotes) {
-        System.err.println("Warning: Unclosed quote detected.");
-    }
-
-    return tokens.toArray(new String[0]);
-}if(currentToken.length()>0)
-
-    {
-        if (inDoubleQuotes) {
-            tokens.add(processDoubleQuotedString(currentToken.toString()));
-        } else if (inSingleQuotes) {
-            tokens.add(currentToken.toString());
-        } else {
+        if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
         }
-    }if(inSingleQuotes||inDoubleQuotes)
-    {
-        System.err.println("Warning: Unclosed quote detected.");
-    }return tokens.toArray(new String[0]);
-    }
-
-    private static String processDoubleQuotedString(String str) {
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < str.length(); i++) {
-            char c = str.charAt(i);
-            if (c == '\\' && i + 1 < str.length()) {
-                char nextChar = str.charAt(i + 1);
-                if (nextChar == '\\' || nextChar == '$' || nextChar == '"') {
-                    result.append(nextChar);
-                    i++; // Skip the next character as it's already processed
-                } else {
-                    result.append(c);
-                }
-            } else {
-                result.append(c);
-            }
-        }
-        return result.toString();
+        return tokens.toArray(new String[0]);
     }
 
     private static void executeProgram(File programFile, String[] arguments) {
