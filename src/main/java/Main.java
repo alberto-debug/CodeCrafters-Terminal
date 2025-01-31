@@ -117,7 +117,7 @@ public class Main {
                 inSingleQuotes = !inSingleQuotes;
             } else if (c == '"') {
                 if (inDoubleQuotes) {
-                    tokens.add(processDoubleQuotedString(currentToken.toString()));
+                    tokens.add(currentToken.toString());
                     currentToken.setLength(0); // Clear the buffer
                 } else {
                     if (currentToken.length() > 0) {
@@ -146,18 +146,31 @@ public class Main {
             }
         }
         if (currentToken.length() > 0) {
-            if (inDoubleQuotes) {
-                tokens.add(processDoubleQuotedString(currentToken.toString()));
-            } else if (inSingleQuotes) {
-                tokens.add(currentToken.toString());
-            } else {
-                tokens.add(currentToken.toString());
-            }
+            tokens.add(currentToken.toString());
         }
         if (inSingleQuotes || inDoubleQuotes) {
             System.err.println("Warning: Unclosed quote detected.");
         }
-        return tokens.toArray(new String[0]);
+
+        // Merge adjacent tokens if they are not separated by spaces
+        List<String> mergedTokens = new ArrayList<>();
+        StringBuilder mergedToken = new StringBuilder();
+        for (String token : tokens) {
+            if (token.startsWith("\"") && token.endsWith("\"")) {
+                mergedToken.append(token.substring(1, token.length() - 1));
+            } else {
+                if (mergedToken.length() > 0) {
+                    mergedTokens.add(mergedToken.toString());
+                    mergedToken.setLength(0);
+                }
+                mergedTokens.add(token);
+            }
+        }
+        if (mergedToken.length() > 0) {
+            mergedTokens.add(mergedToken.toString());
+        }
+
+        return mergedTokens.toArray(new String[0]);
     }
 
     private static String processDoubleQuotedString(String str) {
