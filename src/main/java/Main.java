@@ -33,7 +33,12 @@ public class Main {
                 if (arguments.length == 0) {
                     System.out.println();
                 } else {
-                    System.out.println(String.join(" ", arguments)); // Join with spaces
+                    // Concatenate arguments without adding spaces between adjacent quoted strings
+                    StringBuilder output = new StringBuilder();
+                    for (String arg : arguments) {
+                        output.append(arg);
+                    }
+                    System.out.println(output.toString());
                 }
             } else if (command.equals("type")) {
                 String typeArg = arguments.length > 0 ? arguments[0] : "";
