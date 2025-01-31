@@ -108,12 +108,22 @@ public class Main {
                 if (inSingleQuotes) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0); // Clear the buffer
+                } else {
+                    if (currentToken.length() > 0) {
+                        tokens.add(currentToken.toString());
+                        currentToken.setLength(0); // Clear the buffer
+                    }
                 }
                 inSingleQuotes = !inSingleQuotes;
             } else if (c == '"') {
                 if (inDoubleQuotes) {
                     tokens.add(processDoubleQuotedString(currentToken.toString()));
                     currentToken.setLength(0); // Clear the buffer
+                } else {
+                    if (currentToken.length() > 0) {
+                        tokens.add(currentToken.toString());
+                        currentToken.setLength(0); // Clear the buffer
+                    }
                 }
                 inDoubleQuotes = !inDoubleQuotes;
             } else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
@@ -138,9 +148,14 @@ public class Main {
         if (currentToken.length() > 0) {
             if (inDoubleQuotes) {
                 tokens.add(processDoubleQuotedString(currentToken.toString()));
+            } else if (inSingleQuotes) {
+                tokens.add(currentToken.toString());
             } else {
                 tokens.add(currentToken.toString());
             }
+        }
+        if (inSingleQuotes || inDoubleQuotes) {
+            System.err.println("Warning: Unclosed quote detected.");
         }
         return tokens.toArray(new String[0]);
     }
