@@ -105,53 +105,33 @@ public class Main {
         char quoteChar = ' ';
         boolean escapeNext = false;
 
-        for (int i = 0; i < input.length(); i++) {
-            char c = input.charAt(i);
-
-            // If the previous character was an escape character, just add the current one
+        for (char c : input.toCharArray()) {
             if (escapeNext) {
                 currentToken.append(c);
                 escapeNext = false;
-                continue;
-            }
-
-            // Handle backslashes within quotes
-            if (c == '\\' && inQuotes) {
-                // Check if the next character is one of the escape sequences
-                if (i + 1 < input.length() && (input.charAt(i + 1) == '\\' || input.charAt(i + 1) == '$'
-                        || input.charAt(i + 1) == '"' || input.charAt(i + 1) == '\n')) {
-                    // Escape the next character
-                    currentToken.append(c);
-                    escapeNext = true;
-                    continue;
-                } else {
-                    // If it's not an escapeable character, treat the backslash as part of the text
-                    currentToken.append(c);
-                }
-            }
-
-            // Check for starting or ending quotes
-            if ((c == '"' || c == '\'') && !inQuotes) {
+            } else if (c == '\\' && !inQuotes) {
+                escapeNext = true;
+            } else if ((c == '"' || c == '\'') && !inQuotes) {
                 inQuotes = true;
                 quoteChar = c;
-                continue;
             } else if (c == quoteChar && inQuotes) {
                 inQuotes = false;
-                continue;
-            }
-
-            // If we encounter whitespace outside quotes, treat it as a delimiter
-            if (Character.isWhitespace(c) && !inQuotes) {
+            } else if (Character.isWhitespace(c) && !inQuotes) {
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 }
             } else {
+                if (c == '\\' && (input.indexOf(c) + 1 < input.length())
+                        && (input.charAt(input.indexOf(c) + 1) == '\\' || input.charAt(input.indexOf(c) + 1) == '"'
+                                || input.charAt(input.indexOf(c) + 1) == '$'
+                                || input.charAt(input.indexOf(c) + 1) == '\n')) {
+                    escapeNext = true;
+                }
                 currentToken.append(c);
             }
         }
 
-        // Add the last token if any
         if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
         }
