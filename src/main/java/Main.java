@@ -101,8 +101,8 @@ public class Main {
     private static String[] parseCommandLine(String input) {
         List<String> tokens = new ArrayList<>();
         StringBuilder currentToken = new StringBuilder();
-        boolean inQuotes = false;
-        char quoteChar = ' ';
+        boolean inSingleQuotes = false;
+        boolean inDoubleQuotes = false;
         boolean escapeNext = false;
 
         for (int i = 0; i < input.length(); i++) {
@@ -113,12 +113,20 @@ public class Main {
                 currentToken.append(c);
                 escapeNext = false;
             } else if (c == '\\') {
-                if (inQuotes) {
-                    // Inside quotes, backslash only escapes specific characters
+                if (inSingleQuotes) {
+                    // Inside single quotes, backslash is treated as literal except for single quote
+                    if (i + 1 < input.length() && input.charAt(i + 1) == '\'') {
+                        // Escape the single quote
+                        escapeNext = true;
+                    } else {
+                        // Treat the backslash as a literal character
+                        currentToken.append(c);
+                    }
+                } else if (inDoubleQuotes) {
+                    // Inside double quotes, backslash only escapes specific characters
                     if (i + 1 < input.length()) {
                         char nextChar = input.charAt(i + 1);
-                        if (nextChar == '\\' || nextChar == '"' || nextChar == '$' || nextChar == '\n'
-                                || nextChar == '\'') {
+                        if (nextChar == '\\' || nextChar == '"' || nextChar == '$' || nextChar == '\n') {
                             // Preserve the backslash for these special characters
                             escapeNext = true;
                         } else {
@@ -133,14 +141,13 @@ public class Main {
                     // Outside quotes, backslash always escapes the next character
                     escapeNext = true;
                 }
-            } else if ((c == '"' || c == '\'') && !inQuotes) {
-                // Start of quotes
-                inQuotes = true;
-                quoteChar = c;
-            } else if (c == quoteChar && inQuotes) {
-                // End of quotes
-                inQuotes = false;
-            } else if (Character.isWhitespace(c) && !inQuotes) {
+            } else if (c == '\'' && !inDoubleQuotes) {
+                // Toggle single quotes
+                inSingleQuotes = !inSingleQuotes;
+            } else if (c == '"' && !inSingleQuotes) {
+                // Toggle double quotes
+                inDoubleQuotes = !inDoubleQuotes;
+            } else if (Character.isWhitespace(c) && !inSingleQuotes && !inDoubleQuotes) {
                 // End of token if not inside quotes
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
