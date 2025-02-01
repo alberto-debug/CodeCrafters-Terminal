@@ -134,8 +134,7 @@ public class Main {
             } else if (c == '"') {
                 // Toggle double quotes
                 inDoubleQuotes = !inDoubleQuotes;
-                // Preserve the quotes in the token
-                currentToken.append(c);
+                // Do not append the quote to the token
             } else if (Character.isWhitespace(c) && !inDoubleQuotes) {
                 // End of token if not inside double quotes
                 if (currentToken.length() > 0) {
