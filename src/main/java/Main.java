@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -42,6 +41,7 @@ public class Main {
             if (command.equals("echo")) {
                 String output = (arguments.length == 0) ? "" : String.join(" ", arguments);
                 if (outputFile != null) {
+                    ensureDirectoryExists(outputFile);
                     try (FileWriter writer = new FileWriter(outputFile)) {
                         writer.write(output);
                     } catch (IOException e) {
@@ -126,26 +126,7 @@ public class Main {
                 currentToken.append(c);
                 escapeNext = false;
             } else if (c == '\\') {
-                if (inSingleQuotes) {
-                    if (i + 1 < input.length() && input.charAt(i + 1) == '\'') {
-                        escapeNext = true;
-                    } else {
-                        currentToken.append(c);
-                    }
-                } else if (inDoubleQuotes) {
-                    if (i + 1 < input.length()) {
-                        char nextChar = input.charAt(i + 1);
-                        if (nextChar == '\\' || nextChar == '"' || nextChar == '$' || nextChar == '\n') {
-                            escapeNext = true;
-                        } else {
-                            currentToken.append(c);
-                        }
-                    } else {
-                        currentToken.append(c);
-                    }
-                } else {
-                    escapeNext = true;
-                }
+                escapeNext = true;
             } else if (c == '\'' && !inDoubleQuotes) {
                 inSingleQuotes = !inSingleQuotes;
             } else if (c == '"' && !inSingleQuotes) {
@@ -169,19 +150,25 @@ public class Main {
 
     private static void executeProgram(File programFile, String[] arguments, String outputFile, String errorFile) {
         try {
+            if (outputFile != null) {
+                ensureDirectoryExists(outputFile);
+            }
+            if (errorFile != null) {
+                ensureDirectoryExists(errorFile);
+            }
+
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
             commandWithArgs[0] = programName;
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
             processBuilder.directory(new File(System.getProperty("user.dir")));
-            processBuilder.environment().put("PATH", System.getenv("PATH"));
             Process process = processBuilder.start();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-
             String line;
+
             if (outputFile != null) {
                 try (FileWriter writer = new FileWriter(outputFile)) {
                     while ((line = reader.readLine()) != null) {
@@ -195,16 +182,14 @@ public class Main {
             }
 
             if (errorFile != null) {
-                try (FileWriter errorWriter = new FileWriter(errorFile)) {
-                    String errorLine;
-                    while ((errorLine = errorReader.readLine()) != null) {
-                        errorWriter.write(errorLine + "\n");
+                try (FileWriter writer = new FileWriter(errorFile)) {
+                    while ((line = errorReader.readLine()) != null) {
+                        writer.write(line + "\n");
                     }
                 }
             } else {
-                String errorLine;
-                while ((errorLine = errorReader.readLine()) != null) {
-                    System.err.println(errorLine);
+                while ((line = errorReader.readLine()) != null) {
+                    System.err.println(line);
                 }
             }
 
@@ -215,26 +200,38 @@ public class Main {
     }
 
     private static String[] parseRedirection(String input) {
-        String[] parts = new String[] { input, null, null };
+        String command = input;
+        String outputFile = null;
+        String errorFile = null;
 
-        // Check for '1>' first (stdout redirection)
-        if (input.contains("1>")) {
-            String[] commandParts = input.split("1>", 2);
-            parts[0] = commandParts[0].trim();
-            parts[1] = commandParts[1].trim();
-        } else if (input.contains(">")) {
-            String[] commandParts = input.split(">", 2);
-            parts[0] = commandParts[0].trim();
-            parts[1] = commandParts[1].trim();
-        }
-
-        // Check for '2>' (stderr redirection)
         if (input.contains("2>")) {
-            String[] commandParts = input.split("2>", 2);
-            parts[0] = commandParts[0].trim();
-            parts[2] = commandParts[1].trim();
+            String[] parts = input.split("2>", 2);
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                errorFile = parts[1].trim();
+            }
+        } else if (input.contains("1>")) {
+            String[] parts = input.split("1>", 2);
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                outputFile = parts[1].trim();
+            }
+        } else if (input.contains(">")) {
+            String[] parts = input.split(">", 2);
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                outputFile = parts[1].trim();
+            }
         }
 
-        return parts;
+        return new String[] { command, outputFile, errorFile };
+    }
+
+    private static void ensureDirectoryExists(String filePath) {
+        File file = new File(filePath);
+        File parentDir = file.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            parentDir.mkdirs(); // Create the directory if it doesn't exist
+        }
     }
 }
