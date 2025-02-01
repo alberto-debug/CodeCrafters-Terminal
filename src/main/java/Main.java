@@ -101,53 +101,55 @@ public class Main {
     private static String[] parseCommandLine(String input) {
         List<String> tokens = new ArrayList<>();
         StringBuilder currentToken = new StringBuilder();
-        boolean inDoubleQuotes = false;
+        boolean inQuotes = false;
+        char quoteChar = ' ';
         boolean escapeNext = false;
 
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
 
+            // If the previous character was an escape character, just add the current one
             if (escapeNext) {
-                // Handle escaped characters
                 currentToken.append(c);
                 escapeNext = false;
-            } else if (c == '\\') {
-                if (inDoubleQuotes) {
-                    // Inside double quotes, backslash only escapes specific characters
-                    if (i + 1 < input.length()) {
-                        char nextChar = input.charAt(i + 1);
-                        if (nextChar == '\\' || nextChar == '$' || nextChar == '"' || nextChar == '\n') {
-                            // Preserve the backslash for these special characters
-                            escapeNext = true;
-                        } else {
-                            // Treat the backslash as a literal character
-                            currentToken.append(c);
-                        }
-                    } else {
-                        // Backslash at the end of input, treat as literal
-                        currentToken.append(c);
-                    }
-                } else {
-                    // Outside double quotes, backslash always escapes the next character
+                continue;
+            }
+
+            // Handle backslashes within quotes
+            if (c == '\\' && inQuotes) {
+                // Check if it's an escape sequence that we need to handle
+                if (i + 1 < input.length() && (input.charAt(i + 1) == '\\' || input.charAt(i + 1) == '$'
+                        || input.charAt(i + 1) == '"' || input.charAt(i + 1) == '\n')) {
+                    // We need to escape the next character, so just add the backslash and the next
+                    // character
+                    currentToken.append(c);
                     escapeNext = true;
+                    continue;
                 }
-            } else if (c == '"') {
-                // Toggle double quotes
-                inDoubleQuotes = !inDoubleQuotes;
-                // Do not append the quote to the token
-            } else if (Character.isWhitespace(c) && !inDoubleQuotes) {
-                // End of token if not inside double quotes
+            }
+
+            // Check for starting or ending quotes
+            if ((c == '"' || c == '\'') && !inQuotes) {
+                inQuotes = true;
+                quoteChar = c;
+                continue;
+            } else if (c == quoteChar && inQuotes) {
+                inQuotes = false;
+                continue;
+            }
+
+            // If we encounter whitespace outside quotes, treat it as a delimiter
+            if (Character.isWhitespace(c) && !inQuotes) {
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 }
             } else {
-                // Append the character to the current token
                 currentToken.append(c);
             }
         }
 
-        // Add the last token if it exists
+        // Add the last token if any
         if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
         }
