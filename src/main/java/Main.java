@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -30,7 +29,8 @@ public class Main {
             // Parse redirection
             String[] redirectionParts = parseRedirection(input);
             String commandInput = redirectionParts[0];
-            String outputFile = redirectionParts[1];
+            String stdoutFile = redirectionParts[1];
+            String stderrFile = redirectionParts[2];
 
             // Parse command and arguments
             String[] commandAndArgs = parseCommandLine(commandInput);
@@ -40,8 +40,8 @@ public class Main {
 
             if (command.equals("echo")) {
                 String output = (arguments.length == 0) ? "" : String.join(" ", arguments);
-                if (outputFile != null) {
-                    try (FileWriter writer = new FileWriter(outputFile)) {
+                if (stdoutFile != null) {
+                    try (FileWriter writer = new FileWriter(stdoutFile)) {
                         writer.write(output);
                     } catch (IOException e) {
                         System.err.println("Error writing to file: " + e.getMessage());
@@ -100,7 +100,7 @@ public class Main {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
                         found = true;
-                        executeProgram(file, arguments, outputFile);
+                        executeProgram(file, arguments, stdoutFile, stderrFile);
                         break;
                     }
                 }
@@ -180,7 +180,7 @@ public class Main {
         return tokens.toArray(new String[0]);
     }
 
-    private static void executeProgram(File programFile, String[] arguments, String outputFile) {
+    private static void executeProgram(File programFile, String[] arguments, String stdoutFile, String stderrFile) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
@@ -189,27 +189,36 @@ public class Main {
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
             processBuilder.directory(new File(System.getProperty("user.dir")));
             processBuilder.environment().put("PATH", System.getenv("PATH")); // Ensure PATH is correctly set
+
+            // Redirect stdout if specified
+            if (stdoutFile != null) {
+                processBuilder.redirectOutput(new File(stdoutFile));
+            }
+
+            // Redirect stderr if specified
+            if (stderrFile != null) {
+                processBuilder.redirectError(new File(stderrFile));
+            }
+
             Process process = processBuilder.start();
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-            String line;
-            if (outputFile != null) {
-                try (FileWriter writer = new FileWriter(outputFile)) {
-                    while ((line = reader.readLine()) != null) {
-                        writer.write(line + "\n");
-                    }
-                }
-            } else {
+            // If no redirection, print output to console
+            if (stdoutFile == null) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
                 }
             }
 
-            String errorLine;
-            while ((errorLine = errorReader.readLine()) != null) {
-                System.err.println(errorLine);
+            if (stderrFile == null) {
+                BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+                String errorLine;
+                while ((errorLine = errorReader.readLine()) != null) {
+                    System.err.println(errorLine);
+                }
             }
+
             process.waitFor();
         } catch (IOException | InterruptedException e) {
             System.err.println("Error executing program: " + e.getMessage());
@@ -217,25 +226,34 @@ public class Main {
     }
 
     private static String[] parseRedirection(String input) {
-        // Check for '1>' first, then '>'
-        if (input.contains("1>")) {
-            String[] parts = input.split("1>", 2); // Split on the first occurrence of '1>'
+        String stdoutFile = null;
+        String stderrFile = null;
+        String command = input;
+
+        // Check for stderr redirection (2>)
+        if (input.contains("2>")) {
+            String[] parts = input.split("2>", 2);
             if (parts.length == 2) {
-                // Trim whitespace from the command and file path
-                String command = parts[0].trim();
-                String filePath = parts[1].trim();
-                return new String[] { command, filePath };
-            }
-        } else if (input.contains(">")) {
-            String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
-            if (parts.length == 2) {
-                // Trim whitespace from the command and file path
-                String command = parts[0].trim();
-                String filePath = parts[1].trim();
-                return new String[] { command, filePath };
+                command = parts[0].trim();
+                stderrFile = parts[1].trim();
             }
         }
-        // No redirection found
-        return new String[] { input, null };
+
+        // Check for stdout redirection (1> or >)
+        if (input.contains("1>")) {
+            String[] parts = command.split("1>", 2);
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                stdoutFile = parts[1].trim();
+            }
+        } else if (input.contains(">")) {
+            String[] parts = command.split(">", 2);
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                stdoutFile = parts[1].trim();
+            }
+        }
+
+        return new String[] { command, stdoutFile, stderrFile };
     }
 }
