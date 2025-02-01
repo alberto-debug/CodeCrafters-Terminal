@@ -4,17 +4,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         String currentDirectory = Paths.get("").toAbsolutePath().toString();
-        Scanner scanner = new Scanner(System.in);
-
         while (true) {
             System.out.print("$ ");
+            Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine().trim();
             if (input.isEmpty()) {
                 continue;
@@ -26,109 +24,77 @@ public class Main {
             if (input.equals("exit 0")) {
                 break;
             }
-
+            // Parse command and arguments while preserving quotes
             String[] commandAndArgs = parseCommandLine(input);
             String command = commandAndArgs[0];
-            String[] arguments = Arrays.copyOfRange(commandAndArgs, 1, commandAndArgs.length);
-
-            switch (command) {
-                case "echo":
+            String[] arguments = new String[commandAndArgs.length - 1];
+            System.arraycopy(commandAndArgs, 1, arguments, 0, commandAndArgs.length - 1);
+            if (command.equals("echo")) {
+                if (arguments.length == 0) {
+                    System.out.println();
+                } else {
+                    // Join arguments with a single space between them
                     System.out.println(String.join(" ", arguments));
-                    break;
-                case "type":
-                    handleTypeCommand(arguments);
-                    break;
-                case "cd":
-                    currentDirectory = changeDirectory(currentDirectory, arguments);
-                    break;
-                default:
-                    executeExternalCommand(command, arguments);
-            }
-        }
-        scanner.close();
-    }
-
-    private static void handleTypeCommand(String[] arguments) {
-        if (arguments.length == 0) {
-            System.out.println("type: missing operand");
-            return;
-        }
-
-        String typeArg = arguments[0];
-        List<String> builtins = Arrays.asList("echo", "exit", "type", "pwd", "cd");
-
-        if (builtins.contains(typeArg)) {
-            System.out.println(typeArg + " is a shell builtin");
-            return;
-        }
-
-        String path = System.getenv("PATH");
-        for (String dir : path.split(File.pathSeparator)) {
-            File file = new File(dir, typeArg);
-            if (file.exists() && file.canExecute()) {
-                System.out.println(typeArg + " is " + file.getAbsolutePath());
-                return;
-            }
-        }
-        System.out.println(typeArg + ": not found");
-    }
-
-    private static String changeDirectory(String currentDirectory, String[] arguments) {
-        if (arguments.length == 0) {
-            return System.getProperty("user.home");
-        }
-
-        String path = arguments[0].replace("~", System.getProperty("user.home"));
-        File directory = path.startsWith("./") || path.startsWith("../") ? new File(currentDirectory, path)
-                : new File(path);
-
-        try {
-            if (directory.exists() && directory.isDirectory()) {
-                return directory.getCanonicalPath();
+                }
+            } else if (command.equals("type")) {
+                String typeArg = arguments.length > 0 ? arguments[0] : "";
+                if (typeArg.equals("echo") || typeArg.equals("exit") || typeArg.equals("type")
+                        || typeArg.equals("pwd")) {
+                    System.out.println(typeArg + " is a shell builtin");
+                } else {
+                    String path = System.getenv("PATH");
+                    String[] directories = path.split(File.pathSeparator);
+                    boolean found = false;
+                    for (String dir : directories) {
+                        File file = new File(dir, typeArg);
+                        if (file.exists() && file.canExecute()) {
+                            System.out.println(typeArg + " is " + dir + "/" + typeArg);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        System.out.println(typeArg + ": not found");
+                    }
+                }
+            } else if (command.equals("cd")) {
+                String path = arguments.length > 0 ? arguments[0] : "";
+                File directory;
+                if (path.contains("~")) {
+                    String homeDirectory = System.getenv("HOME");
+                    path = path.replace("~", homeDirectory);
+                }
+                if (path.startsWith("./") || path.startsWith("../")) {
+                    directory = new File(currentDirectory, path);
+                } else {
+                    directory = new File(path);
+                }
+                try {
+                    if (directory.exists() && directory.isDirectory()) {
+                        currentDirectory = directory.getCanonicalPath();
+                        System.setProperty("user.dir", currentDirectory);
+                    } else {
+                        System.out.println("cd: " + path + ": No such file or directory");
+                    }
+                } catch (IOException e) {
+                    System.err.println("Error resolving path: " + e.getMessage());
+                }
             } else {
-                System.out.println("cd: " + path + ": No such file or directory");
+                String path = System.getenv("PATH");
+                String[] directories = path.split(File.pathSeparator);
+                boolean found = false;
+                for (String dir : directories) {
+                    File file = new File(dir, command);
+                    if (file.exists() && file.canExecute()) {
+                        found = true;
+                        executeProgram(file, arguments);
+                        break;
+                    }
+                }
+                if (!found) {
+                    System.out.println(command + ": not found");
+                }
             }
-        } catch (IOException e) {
-            System.err.println("Error resolving path: " + e.getMessage());
-        }
-        return currentDirectory;
-    }
-
-    private static void executeExternalCommand(String command, String[] arguments) {
-        String path = System.getenv("PATH");
-        for (String dir : path.split(File.pathSeparator)) {
-            File file = new File(dir, command);
-            if (file.exists() && file.canExecute()) {
-                runProcess(file.getAbsolutePath(), arguments);
-                return;
-            }
-        }
-        System.out.println(command + ": not found");
-    }
-
-    private static void runProcess(String program, String[] arguments) {
-        try {
-            List<String> commandList = new ArrayList<>();
-            commandList.add(program);
-            commandList.addAll(Arrays.asList(arguments));
-
-            ProcessBuilder processBuilder = new ProcessBuilder(commandList);
-            processBuilder.directory(new File(System.getProperty("user.dir")));
-
-            Process process = processBuilder.start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
-            }
-            while ((line = errorReader.readLine()) != null) {
-                System.err.println(line);
-            }
-            process.waitFor();
-        } catch (IOException | InterruptedException e) {
-            System.err.println("Error executing program: " + e.getMessage());
         }
     }
 
