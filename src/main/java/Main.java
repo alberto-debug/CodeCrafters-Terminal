@@ -182,6 +182,24 @@ public class Main {
 
     private static void executeProgram(File programFile, String[] arguments, String stdoutFile, String stderrFile) {
         try {
+            // Create parent directories for stdout file if it doesn't exist
+            if (stdoutFile != null) {
+                File stdoutFileObj = new File(stdoutFile);
+                File parentDir = stdoutFileObj.getParentFile();
+                if (parentDir != null && !parentDir.exists()) {
+                    parentDir.mkdirs(); // Create all necessary parent directories
+                }
+            }
+
+            // Create parent directories for stderr file if it doesn't exist
+            if (stderrFile != null) {
+                File stderrFileObj = new File(stderrFile);
+                File parentDir = stderrFileObj.getParentFile();
+                if (parentDir != null && !parentDir.exists()) {
+                    parentDir.mkdirs(); // Create all necessary parent directories
+                }
+            }
+
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
             commandWithArgs[0] = programName; // Use just the program name for argv[0]
