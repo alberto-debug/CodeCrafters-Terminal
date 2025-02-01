@@ -108,22 +108,30 @@ public class Main {
                 currentToken.append(c);
                 escape = false;
             } else if (c == '\\') {
+                // If backslash, escape the next character
                 escape = true;
             } else if (c == '\'' && !inDoubleQuotes) {
+                // Toggle single quote state if not inside double quotes
                 inSingleQuotes = !inSingleQuotes;
             } else if (c == '"' && !inSingleQuotes) {
+                // Toggle double quote state if not inside single quotes
                 inDoubleQuotes = !inDoubleQuotes;
             } else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
+                // Split token when outside quotes and encounter a space
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 }
             } else {
+                // Append the character to the current token
                 currentToken.append(c);
             }
         }
+
+        // Add the last token if any
         if (currentToken.length() > 0)
             tokens.add(currentToken.toString());
+
         return tokens.toArray(new String[0]);
     }
 
