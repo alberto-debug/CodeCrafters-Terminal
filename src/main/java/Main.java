@@ -110,9 +110,11 @@ public class Main {
             // Handling single quotes
             if (c == '\'') {
                 if (inSingleQuotes) {
+                    // End of single-quoted token
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 } else {
+                    // Start of single-quoted token
                     if (currentToken.length() > 0) {
                         tokens.add(currentToken.toString());
                         currentToken.setLength(0);
@@ -123,9 +125,11 @@ public class Main {
             // Handling double quotes
             else if (c == '"') {
                 if (inDoubleQuotes) {
+                    // End of double-quoted token
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 } else {
+                    // Start of double-quoted token
                     if (currentToken.length() > 0) {
                         tokens.add(currentToken.toString());
                         currentToken.setLength(0);
@@ -133,7 +137,7 @@ public class Main {
                 }
                 inDoubleQuotes = !inDoubleQuotes;
             }
-            // Handle whitespace
+            // Handle whitespace outside quotes
             else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
@@ -145,7 +149,7 @@ public class Main {
                 char nextChar = input.charAt(i + 1);
                 if (nextChar == '\\' || nextChar == '$' || nextChar == '"') {
                     currentToken.append(nextChar);
-                    i++;
+                    i++; // Skip the next character
                 } else {
                     currentToken.append(c);
                 }
@@ -154,7 +158,7 @@ public class Main {
             }
         }
 
-        // Add the last token if exists
+        // Add the last token if it exists
         if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
         }
@@ -169,16 +173,18 @@ public class Main {
         boolean lastWasQuoted = false;
 
         for (String token : tokens) {
-            if (token.startsWith("\"") && token.endsWith("\"")) {
-                // If the last token was also quoted, concatenate them
+            if ((token.startsWith("\"") && token.endsWith("\"")) ||
+                    (token.startsWith("'") && token.endsWith("'"))) {
+                // Remove quotes and merge with the previous token if it was also quoted
+                String unquotedToken = token.substring(1, token.length() - 1);
                 if (lastWasQuoted) {
-                    mergedToken.append(token.substring(1, token.length() - 1)); // remove quotes and merge
+                    mergedToken.append(unquotedToken);
                 } else {
                     if (mergedToken.length() > 0) {
                         mergedTokens.add(mergedToken.toString());
                         mergedToken.setLength(0);
                     }
-                    mergedToken.append(token.substring(1, token.length() - 1)); // remove quotes and keep
+                    mergedToken.append(unquotedToken);
                 }
                 lastWasQuoted = true;
             } else {
@@ -190,6 +196,8 @@ public class Main {
                 lastWasQuoted = false;
             }
         }
+
+        // Add the last merged token if it exists
         if (mergedToken.length() > 0) {
             mergedTokens.add(mergedToken.toString());
         }
