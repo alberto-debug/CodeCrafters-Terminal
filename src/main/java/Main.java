@@ -1,3 +1,4 @@
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -30,7 +31,6 @@ public class Main {
             String[] redirectionParts = parseRedirection(input);
             String commandInput = redirectionParts[0];
             String outputFile = redirectionParts[1];
-            String errorFile = redirectionParts[2];
 
             // Parse command and arguments
             String[] commandAndArgs = parseCommandLine(commandInput);
@@ -41,13 +41,12 @@ public class Main {
             if (command.equals("echo")) {
                 String output = (arguments.length == 0) ? "" : String.join(" ", arguments);
                 if (outputFile != null) {
-                    // Redirect stdout to the output file
-                    writeToFile(outputFile, output);
-                } else if (errorFile != null) {
-                    // Do not write echo output to the error file (echo writes to stdout by default)
-                    System.out.println(output);
+                    try (FileWriter writer = new FileWriter(outputFile)) {
+                        writer.write(output);
+                    } catch (IOException e) {
+                        System.err.println("Error writing to file: " + e.getMessage());
+                    }
                 } else {
-                    // No redirection, print to stdout
                     System.out.println(output);
                 }
             } else if (command.equals("type")) {
@@ -101,7 +100,7 @@ public class Main {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
                         found = true;
-                        executeProgram(file, arguments, outputFile, errorFile);
+                        executeProgram(file, arguments, outputFile);
                         break;
                     }
                 }
@@ -181,7 +180,7 @@ public class Main {
         return tokens.toArray(new String[0]);
     }
 
-    private static void executeProgram(File programFile, String[] arguments, String outputFile, String errorFile) {
+    private static void executeProgram(File programFile, String[] arguments, String outputFile) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
@@ -196,7 +195,11 @@ public class Main {
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
             String line;
             if (outputFile != null) {
-                writeToFile(outputFile, reader);
+                try (FileWriter writer = new FileWriter(outputFile)) {
+                    while ((line = reader.readLine()) != null) {
+                        writer.write(line + "\n");
+                    }
+                }
             } else {
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
@@ -204,12 +207,8 @@ public class Main {
             }
 
             String errorLine;
-            if (errorFile != null) {
-                writeToFile(errorFile, errorReader);
-            } else {
-                while ((errorLine = errorReader.readLine()) != null) {
-                    System.err.println(errorLine);
-                }
+            while ((errorLine = errorReader.readLine()) != null) {
+                System.err.println(errorLine);
             }
             process.waitFor();
         } catch (IOException | InterruptedException e) {
@@ -218,63 +217,25 @@ public class Main {
     }
 
     private static String[] parseRedirection(String input) {
-        String command = input;
-        String outputFile = null;
-        String errorFile = null;
-
-        // Check for '2>' first
-        if (input.contains("2>")) {
-            String[] parts = input.split("2>", 2); // Split on the first occurrence of '2>'
+        // Check for '1>' first, then '>'
+        if (input.contains("1>")) {
+            String[] parts = input.split("1>", 2); // Split on the first occurrence of '1>'
             if (parts.length == 2) {
-                command = parts[0].trim();
-                errorFile = parts[1].trim();
+                // Trim whitespace from the command and file path
+                String command = parts[0].trim();
+                String filePath = parts[1].trim();
+                return new String[] { command, filePath };
             }
-        }
-
-        // Check for '1>' or '>' after handling '2>'
-        if (command.contains("1>")) {
-            String[] parts = command.split("1>", 2); // Split on the first occurrence of '1>'
+        } else if (input.contains(">")) {
+            String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
             if (parts.length == 2) {
-                command = parts[0].trim();
-                outputFile = parts[1].trim();
-            }
-        } else if (command.contains(">")) {
-            String[] parts = command.split(">", 2); // Split on the first occurrence of '>'
-            if (parts.length == 2) {
-                command = parts[0].trim();
-                outputFile = parts[1].trim();
+                // Trim whitespace from the command and file path
+                String command = parts[0].trim();
+                String filePath = parts[1].trim();
+                return new String[] { command, filePath };
             }
         }
-
-        return new String[] { command, outputFile, errorFile };
-    }
-
-    private static void writeToFile(String filePath, String content) {
-        File file = new File(filePath);
-        File parentDir = file.getParentFile();
-        if (parentDir != null && !parentDir.exists()) {
-            parentDir.mkdirs(); // Create parent directories if they don't exist
-        }
-        try (FileWriter writer = new FileWriter(file)) {
-            writer.write(content);
-        } catch (IOException e) {
-            System.err.println("Error writing to file: " + e.getMessage());
-        }
-    }
-
-    private static void writeToFile(String filePath, BufferedReader reader) throws IOException {
-        File file = new File(filePath);
-        File parentDir = file.getParentFile();
-        if (parentDir != null && !parentDir.exists()) {
-            parentDir.mkdirs(); // Create parent directories if they don't exist
-        }
-        try (FileWriter writer = new FileWriter(file)) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                writer.write(line + "\n");
-            }
-        } catch (IOException e) {
-            System.err.println("Error writing to file: " + e.getMessage());
-        }
+        // No redirection found
+        return new String[] { input, null };
     }
 }
