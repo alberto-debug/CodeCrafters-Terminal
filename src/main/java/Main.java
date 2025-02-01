@@ -192,4 +192,47 @@ public class Main {
             System.err.println("Error executing program: " + e.getMessage());
         }
     }
+
+    private static String handleCommandSubstitution(String input) {
+        StringBuilder result = new StringBuilder();
+        int i = 0;
+        while (i < input.length()) {
+            if (input.startsWith("$(", i)) {
+                // Find the closing parenthesis
+                int end = input.indexOf(')', i + 2);
+                if (end == -1) {
+                    throw new IllegalArgumentException("Unterminated command substitution");
+                }
+                // Extract the command
+                String command = input.substring(i + 2, end);
+                // Execute the command and capture the output
+                String output = executeCommand(command);
+                // Append the output to the result
+                result.append(output);
+                // Skip past the substitution
+                i = end + 1;
+            } else {
+                // Append the character to the result
+                result.append(input.charAt(i));
+                i++;
+            }
+        }
+        return result.toString();
+    }
+
+    private static String executeCommand(String command) {
+        try {
+            Process process = Runtime.getRuntime().exec(command);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            StringBuilder output = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
+            process.waitFor();
+            return output.toString().trim();
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Error executing command: " + command, e);
+        }
+    }
 }
