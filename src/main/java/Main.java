@@ -1,5 +1,8 @@
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +26,7 @@ public class Main {
                 break;
             }
 
-            // Parse redirection (standard output or standard error)
+            // Parse redirection
             String[] redirectionParts = parseRedirection(input);
             String commandInput = redirectionParts[0];
             String outputFile = redirectionParts[1];
@@ -191,7 +194,6 @@ public class Main {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
             String line;
-
             if (outputFile != null) {
                 try (FileWriter writer = new FileWriter(outputFile)) {
                     while ((line = reader.readLine()) != null) {
@@ -204,20 +206,18 @@ public class Main {
                 }
             }
 
+            String errorLine;
             if (errorFile != null) {
                 try (FileWriter writer = new FileWriter(errorFile)) {
-                    String errorLine;
                     while ((errorLine = errorReader.readLine()) != null) {
                         writer.write(errorLine + "\n");
                     }
                 }
             } else {
-                String errorLine;
                 while ((errorLine = errorReader.readLine()) != null) {
                     System.err.println(errorLine);
                 }
             }
-
             process.waitFor();
         } catch (IOException | InterruptedException e) {
             System.err.println("Error executing program: " + e.getMessage());
@@ -225,25 +225,34 @@ public class Main {
     }
 
     private static String[] parseRedirection(String input) {
-        // Check for '2>' redirection (standard error)
+        String command = input;
+        String outputFile = null;
+        String errorFile = null;
+
+        // Check for '2>' first
         if (input.contains("2>")) {
             String[] parts = input.split("2>", 2); // Split on the first occurrence of '2>'
             if (parts.length == 2) {
-                // Trim whitespace from the command and file path
-                String command = parts[0].trim();
-                String filePath = parts[1].trim();
-                return new String[] { command, null, filePath }; // Null for standard output redirection
-            }
-        } else if (input.contains(">")) {
-            String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
-            if (parts.length == 2) {
-                // Trim whitespace from the command and file path
-                String command = parts[0].trim();
-                String filePath = parts[1].trim();
-                return new String[] { command, filePath, null }; // Null for error redirection
+                command = parts[0].trim();
+                errorFile = parts[1].trim();
             }
         }
-        // No redirection found
-        return new String[] { input, null, null };
+
+        // Check for '1>' or '>' after handling '2>'
+        if (command.contains("1>")) {
+            String[] parts = command.split("1>", 2); // Split on the first occurrence of '1>'
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                outputFile = parts[1].trim();
+            }
+        } else if (command.contains(">")) {
+            String[] parts = command.split(">", 2); // Split on the first occurrence of '>'
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                outputFile = parts[1].trim();
+            }
+        }
+
+        return new String[] { command, outputFile, errorFile };
     }
 }
