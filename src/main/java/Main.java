@@ -1,7 +1,13 @@
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -30,63 +36,40 @@ public class Main {
             // Parse command and arguments
             String[] commandAndArgs = parseCommandLine(commandInput);
             String command = commandAndArgs[0];
-            String[] arguments = Arrays.copyOfRange(commandAndArgs, 1, commandAndArgs.length);
+            String[] arguments = new String[commandAndArgs.length - 1];
+            System.arraycopy(commandAndArgs, 1, arguments, 0, commandAndArgs.length - 1);
 
             if (command.equals("echo")) {
                 String output = (arguments.length == 0) ? "" : String.join(" ", arguments);
-                if (errorFile != null) {
-                    // Redirect stderr to file
-                    try (FileWriter errorWriter = new FileWriter(errorFile)) {
-                        errorWriter.write(output);
-                    } catch (IOException e) {
-                        System.err.println("Error writing to error file: " + e.getMessage());
-                    }
-                } else if (outputFile != null) {
-                    // Redirect stdout to file
+                if (outputFile != null) {
                     try (FileWriter writer = new FileWriter(outputFile)) {
                         writer.write(output);
                     } catch (IOException e) {
                         System.err.println("Error writing to file: " + e.getMessage());
                     }
                 } else {
-                    System.out.println(output);  // Print to stdout
+                    System.out.println(output);
                 }
-            } else if (command.equals("ls")) {
-                // Handling ls command
-                try {
-                    Process process = new ProcessBuilder(command, arguments).start();
-                    process.waitFor();
-                    if (process.exitValue() != 0) {
-                        // Redirect stderr to the file specified
-                        String errorMessage = "ls: cannot access '" + arguments[0] + "': No such file or directory";
-                        if (errorFile != null) {
-                            try (FileWriter errorWriter = new FileWriter(errorFile)) {
-                                errorWriter.write(errorMessage);
-                            } catch (IOException e) {
-                                System.err.println("Error writing to error file: " + e.getMessage());
-                            }
+            } else if (command.equals("type")) {
+                String typeArg = arguments.length > 0 ? arguments[0] : "";
+                if (typeArg.equals("echo") || typeArg.equals("exit") || typeArg.equals("type")
+                        || typeArg.equals("pwd")) {
+                    System.out.println(typeArg + " is a shell builtin");
+                } else {
+                    String path = System.getenv("PATH");
+                    String[] directories = path.split(File.pathSeparator);
+                    boolean found = false;
+                    for (String dir : directories) {
+                        File file = new File(dir, typeArg);
+                        if (file.exists() && file.canExecute()) {
+                            System.out.println(typeArg + " is " + dir + "/" + typeArg);
+                            found = true;
+                            break;
                         }
                     }
-                } catch (IOException e) {
-                    System.err.println("Error executing ls: " + e.getMessage());
-                }
-            } else if (command.equals("cat")) {
-                try {
-                    Process process = new ProcessBuilder(command, arguments).start();
-                    process.waitFor();
-                    if (process.exitValue() != 0) {
-                        // Redirect stderr to the file specified
-                        String errorMessage = "cat: " + arguments[0] + ": No such file or directory";
-                        if (errorFile != null) {
-                            try (FileWriter errorWriter = new FileWriter(errorFile)) {
-                                errorWriter.write(errorMessage);
-                            } catch (IOException e) {
-                                System.err.println("Error writing to error file: " + e.getMessage());
-                            }
-                        }
+                    if (!found) {
+                        System.out.println(typeArg + ": not found");
                     }
-                } catch (IOException e) {
-                    System.err.println("Error executing cat: " + e.getMessage());
                 }
             } else if (command.equals("cd")) {
                 String path = arguments.length > 0 ? arguments[0] : "";
@@ -111,7 +94,6 @@ public class Main {
                     System.err.println("Error resolving path: " + e.getMessage());
                 }
             } else {
-                // Handle unknown commands and their output
                 String path = System.getenv("PATH");
                 String[] directories = path.split(File.pathSeparator);
                 boolean found = false;
@@ -199,14 +181,15 @@ public class Main {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
-            String line;
             if (outputFile != null) {
                 try (FileWriter writer = new FileWriter(outputFile)) {
+                    String line;
                     while ((line = reader.readLine()) != null) {
                         writer.write(line + "\n");
                     }
                 }
             } else {
+                String line;
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
                 }
@@ -233,25 +216,18 @@ public class Main {
     }
 
     private static String[] parseRedirection(String input) {
-        String[] parts = new String[] { input, null, null };
+        String[] result = { input, null, null };
 
-        // Check for '1>' first (stdout redirection)
-        if (input.contains("1>")) {
-            String[] commandParts = input.split("1>", 2);
-            parts[0] = commandParts[0].trim();
-            parts[1] = commandParts[1].trim();
-        } else if (input.contains(">")) {
-            String[] commandParts = input.split(">", 2);
-            parts[0] = commandParts[0].trim();
-            parts[1] = commandParts[1].trim();
-        }
-
-        // Check for '2>' (stderr redirection)
         if (input.contains("2>")) {
-            String[] commandParts = input.split("2>", 2);
-            parts[0] = commandParts[0].trim();
-            parts[2] = commandParts[1].trim();
+            String[] parts = input.split("2>", 2);
+            result[0] = parts[0].trim();
+            result[2] = parts[1].trim();
+        } else if (input.contains(">")) {
+            String[] parts = input.split(">", 2);
+            result[0] = parts[0].trim();
+            result[1] = parts[1].trim();
         }
-        return parts;
+
+        return result;
     }
 }
