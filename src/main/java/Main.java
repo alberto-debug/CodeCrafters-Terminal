@@ -101,37 +101,34 @@ public class Main {
     private static String[] parseCommandLine(String input) {
         List<String> tokens = new ArrayList<>();
         StringBuilder currentToken = new StringBuilder();
-        boolean inSingleQuotes = false, inDoubleQuotes = false, escape = false;
+        boolean inQuotes = false;
+        char quoteChar = ' ';
+        boolean escapeNext = false;
 
         for (char c : input.toCharArray()) {
-            if (escape) {
-                // Check for escape sequences
-                if (c == 'n') {
-                    currentToken.append('n'); // Don't interpret as newline
-                } else {
-                    currentToken.append(c); // Preserve other escape characters
-                }
-                escape = false;
-            } else if (c == '\\') {
-                escape = true; // Start of an escape sequence
-            } else if (c == '\'' && !inDoubleQuotes) {
-                inSingleQuotes = !inSingleQuotes; // Toggle single quotes
-            } else if (c == '"' && !inSingleQuotes) {
-                inDoubleQuotes = !inDoubleQuotes; // Toggle double quotes
-            } else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
-                // Split tokens by space when not inside quotes
+            if (escapeNext) {
+                currentToken.append(c);
+                escapeNext = false;
+            } else if (c == '\\' && !inQuotes) {
+                escapeNext = true;
+            } else if ((c == '"' || c == '\'') && !inQuotes) {
+                inQuotes = true;
+                quoteChar = c;
+            } else if (c == quoteChar && inQuotes) {
+                inQuotes = false;
+            } else if (Character.isWhitespace(c) && !inQuotes) {
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 }
             } else {
-                currentToken.append(c); // Regular character, add to token
+                currentToken.append(c);
             }
         }
 
-        // Add the last token if any
-        if (currentToken.length() > 0)
+        if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
+        }
 
         return tokens.toArray(new String[0]);
     }
