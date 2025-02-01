@@ -187,6 +187,9 @@ public class Main {
                 }
                 lastWasDoubleQuoted = true;
             } else {
+                if (lastWasDoubleQuoted) {
+                    mergedToken.append(token); // Junta sem espaço
+                }
                 if (mergedToken.length() > 0) {
                     mergedTokens.add(mergedToken.toString());
                     mergedToken.setLength(0);
