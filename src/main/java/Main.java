@@ -1,3 +1,4 @@
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -30,7 +31,6 @@ public class Main {
             String[] redirectionParts = parseRedirection(input);
             String commandInput = redirectionParts[0];
             String outputFile = redirectionParts[1];
-            String errorFile = redirectionParts[2];
 
             // Parse command and arguments
             String[] commandAndArgs = parseCommandLine(commandInput);
@@ -100,7 +100,7 @@ public class Main {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
                         found = true;
-                        executeProgram(file, arguments, outputFile, errorFile);
+                        executeProgram(file, arguments, outputFile);
                         break;
                     }
                 }
@@ -180,7 +180,7 @@ public class Main {
         return tokens.toArray(new String[0]);
     }
 
-    private static void executeProgram(File programFile, String[] arguments, String outputFile, String errorFile) {
+    private static void executeProgram(File programFile, String[] arguments, String outputFile) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
@@ -207,16 +207,8 @@ public class Main {
             }
 
             String errorLine;
-            if (errorFile != null) {
-                try (FileWriter writer = new FileWriter(errorFile)) {
-                    while ((errorLine = errorReader.readLine()) != null) {
-                        writer.write(errorLine + "\n");
-                    }
-                }
-            } else {
-                while ((errorLine = errorReader.readLine()) != null) {
-                    System.err.println(errorLine);
-                }
+            while ((errorLine = errorReader.readLine()) != null) {
+                System.err.println(errorLine);
             }
             process.waitFor();
         } catch (IOException | InterruptedException e) {
@@ -225,34 +217,25 @@ public class Main {
     }
 
     private static String[] parseRedirection(String input) {
-        String command = input;
-        String outputFile = null;
-        String errorFile = null;
-
-        // Check for '2>' first
-        if (input.contains("2>")) {
-            String[] parts = input.split("2>", 2); // Split on the first occurrence of '2>'
+        // Check for '1>' first, then '>'
+        if (input.contains("1>")) {
+            String[] parts = input.split("1>", 2); // Split on the first occurrence of '1>'
             if (parts.length == 2) {
-                command = parts[0].trim();
-                errorFile = parts[1].trim();
+                // Trim whitespace from the command and file path
+                String command = parts[0].trim();
+                String filePath = parts[1].trim();
+                return new String[] { command, filePath };
+            }
+        } else if (input.contains(">")) {
+            String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
+            if (parts.length == 2) {
+                // Trim whitespace from the command and file path
+                String command = parts[0].trim();
+                String filePath = parts[1].trim();
+                return new String[] { command, filePath };
             }
         }
-
-        // Check for '1>' or '>' after handling '2>'
-        if (command.contains("1>")) {
-            String[] parts = command.split("1>", 2); // Split on the first occurrence of '1>'
-            if (parts.length == 2) {
-                command = parts[0].trim();
-                outputFile = parts[1].trim();
-            }
-        } else if (command.contains(">")) {
-            String[] parts = command.split(">", 2); // Split on the first occurrence of '>'
-            if (parts.length == 2) {
-                command = parts[0].trim();
-                outputFile = parts[1].trim();
-            }
-        }
-
-        return new String[] { command, outputFile, errorFile };
+        // No redirection found
+        return new String[] { input, null };
     }
 }
