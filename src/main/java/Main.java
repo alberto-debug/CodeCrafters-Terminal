@@ -147,7 +147,7 @@ public class Main {
             // Handle escaped characters inside double quotes
             else if (inDoubleQuotes && c == '\\' && i + 1 < input.length()) {
                 char nextChar = input.charAt(i + 1);
-                if (nextChar == '\\' || nextChar == '$' || nextChar == '"') {
+                if (nextChar == '\\' || nextChar == '$' || nextChar == '"' || nextChar == '\n') {
                     currentToken.append(nextChar);
                     i++; // Skip the next character
                 } else {
@@ -167,17 +167,16 @@ public class Main {
             System.err.println("Warning: Unclosed quote detected.");
         }
 
-        // Merge adjacent quoted tokens without spaces
+        // Merge adjacent double-quoted tokens without spaces
         List<String> mergedTokens = new ArrayList<>();
         StringBuilder mergedToken = new StringBuilder();
-        boolean lastWasQuoted = false;
+        boolean lastWasDoubleQuoted = false;
 
         for (String token : tokens) {
-            if ((token.startsWith("\"") && token.endsWith("\"")) ||
-                    (token.startsWith("'") && token.endsWith("'"))) {
-                // Remove quotes and merge with the previous token if it was also quoted
+            if (token.startsWith("\"") && token.endsWith("\"")) {
+                // Remove quotes and merge with the previous token if it was also double-quoted
                 String unquotedToken = token.substring(1, token.length() - 1);
-                if (lastWasQuoted) {
+                if (lastWasDoubleQuoted) {
                     mergedToken.append(unquotedToken);
                 } else {
                     if (mergedToken.length() > 0) {
@@ -186,14 +185,14 @@ public class Main {
                     }
                     mergedToken.append(unquotedToken);
                 }
-                lastWasQuoted = true;
+                lastWasDoubleQuoted = true;
             } else {
                 if (mergedToken.length() > 0) {
                     mergedTokens.add(mergedToken.toString());
                     mergedToken.setLength(0);
                 }
                 mergedTokens.add(token);
-                lastWasQuoted = false;
+                lastWasDoubleQuoted = false;
             }
         }
 
