@@ -101,16 +101,19 @@ public class Main {
     private static String[] parseCommandLine(String input) {
         List<String> tokens = new ArrayList<>();
         StringBuilder currentToken = new StringBuilder();
-        boolean inQuotes = false;
-        char quoteChar = ' ';
+        boolean inSingleQuotes = false, inDoubleQuotes = false, escape = false;
 
         for (char c : input.toCharArray()) {
-            if ((c == '"' || c == '\'') && !inQuotes) {
-                inQuotes = true;
-                quoteChar = c;
-            } else if (c == quoteChar && inQuotes) {
-                inQuotes = false;
-            } else if (Character.isWhitespace(c) && !inQuotes) {
+            if (escape) {
+                currentToken.append(c);
+                escape = false;
+            } else if (c == '\\') {
+                escape = true;
+            } else if (c == '\'' && !inDoubleQuotes) {
+                inSingleQuotes = !inSingleQuotes;
+            } else if (c == '"' && !inSingleQuotes) {
+                inDoubleQuotes = !inDoubleQuotes;
+            } else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
@@ -119,11 +122,8 @@ public class Main {
                 currentToken.append(c);
             }
         }
-
-        if (currentToken.length() > 0) {
+        if (currentToken.length() > 0)
             tokens.add(currentToken.toString());
-        }
-
         return tokens.toArray(new String[0]);
     }
 
