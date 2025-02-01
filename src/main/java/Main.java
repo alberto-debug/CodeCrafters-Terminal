@@ -105,27 +105,54 @@ public class Main {
         char quoteChar = ' ';
         boolean escapeNext = false;
 
-        for (char c : input.toCharArray()) {
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+
             if (escapeNext) {
+                // Handle escaped characters
                 currentToken.append(c);
                 escapeNext = false;
-            } else if (c == '\\' && !inQuotes) {
-                escapeNext = true;
+            } else if (c == '\\') {
+                if (inQuotes) {
+                    // Inside quotes, backslash only escapes specific characters
+                    if (i + 1 < input.length()) {
+                        char nextChar = input.charAt(i + 1);
+                        if (nextChar == '\\' || nextChar == '"' || nextChar == '$' || nextChar == '\n'
+                                || nextChar == '\'') {
+                            // Preserve the backslash for these special characters
+                            escapeNext = true;
+                        } else {
+                            // Treat the backslash as a literal character
+                            currentToken.append(c);
+                        }
+                    } else {
+                        // Backslash at the end of input, treat as literal
+                        currentToken.append(c);
+                    }
+                } else {
+                    // Outside quotes, backslash always escapes the next character
+                    escapeNext = true;
+                }
             } else if ((c == '"' || c == '\'') && !inQuotes) {
+                // Start of quotes
                 inQuotes = true;
                 quoteChar = c;
             } else if (c == quoteChar && inQuotes) {
+                // End of quotes
                 inQuotes = false;
             } else if (Character.isWhitespace(c) && !inQuotes) {
+                // End of token if not inside quotes
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 }
             } else {
+                // Append the character to the current token
                 currentToken.append(c);
             }
         }
 
+        // Add the last token if it exists
         if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
         }
