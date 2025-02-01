@@ -24,18 +24,11 @@ public class Main {
             if (input.equals("exit 0")) {
                 break;
             }
-
-            // Parse redirection
-            String[] redirectionParts = parseRedirection(input);
-            String commandInput = redirectionParts[0];
-            String outputFile = redirectionParts[1];
-
-            // Parse command and arguments
-            String[] commandAndArgs = parseCommandLine(commandInput);
+            // Parse command and arguments while preserving quotes
+            String[] commandAndArgs = parseCommandLine(input);
             String command = commandAndArgs[0];
             String[] arguments = new String[commandAndArgs.length - 1];
             System.arraycopy(commandAndArgs, 1, arguments, 0, commandAndArgs.length - 1);
-
             if (command.equals("echo")) {
                 if (arguments.length == 0) {
                     System.out.println();
@@ -94,7 +87,7 @@ public class Main {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
                         found = true;
-                        executeProgram(file, arguments, outputFile);
+                        executeProgram(file, arguments);
                         break;
                     }
                 }
@@ -174,53 +167,29 @@ public class Main {
         return tokens.toArray(new String[0]);
     }
 
-    private static void executeProgram(File programFile, String[] arguments, String outputFile) {
+    private static void executeProgram(File programFile, String[] arguments) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
             commandWithArgs[0] = programName; // Use just the program name for argv[0]
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
-
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
             processBuilder.directory(new File(System.getProperty("user.dir")));
             processBuilder.environment().put("PATH", System.getenv("PATH")); // Ensure PATH is correctly set
-
-            // Redirect output to the specified file
-            if (outputFile != null) {
-                processBuilder.redirectOutput(new File(outputFile));
-            }
-
             Process process = processBuilder.start();
-
-            // If output is not redirected, print it to the console
-            if (outputFile == null) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    System.out.println(line);
-                }
-                String errorLine;
-                while ((errorLine = errorReader.readLine()) != null) {
-                    System.err.println(errorLine);
-                }
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
             }
-
+            String errorLine;
+            while ((errorLine = errorReader.readLine()) != null) {
+                System.err.println(errorLine);
+            }
             process.waitFor();
         } catch (IOException | InterruptedException e) {
             System.err.println("Error executing program: " + e.getMessage());
         }
-    }
-
-    private static String[] parseRedirection(String input) {
-        String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
-        if (parts.length == 2) {
-            // Trim whitespace from the command and file path
-            String command = parts[0].trim();
-            String filePath = parts[1].trim();
-            return new String[] { command, filePath };
-        }
-        // No redirection found
-        return new String[] { input, null };
     }
 }
