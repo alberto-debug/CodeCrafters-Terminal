@@ -122,12 +122,6 @@ public class Main {
                     currentToken.setLength(0);
                 }
             } else {
-                if (c == '\\' && (input.indexOf(c) + 1 < input.length())
-                        && (input.charAt(input.indexOf(c) + 1) == '\\' || input.charAt(input.indexOf(c) + 1) == '"'
-                                || input.charAt(input.indexOf(c) + 1) == '$'
-                                || input.charAt(input.indexOf(c) + 1) == '\n')) {
-                    escapeNext = true;
-                }
                 currentToken.append(c);
             }
         }
