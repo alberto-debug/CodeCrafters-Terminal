@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -42,10 +41,13 @@ public class Main {
             if (command.equals("echo")) {
                 String output = (arguments.length == 0) ? "" : String.join(" ", arguments);
                 if (outputFile != null) {
+                    // Redirect stdout to the output file
                     writeToFile(outputFile, output);
                 } else if (errorFile != null) {
-                    writeToFile(errorFile, output);
+                    // Do not write echo output to the error file (echo writes to stdout by default)
+                    System.out.println(output);
                 } else {
+                    // No redirection, print to stdout
                     System.out.println(output);
                 }
             } else if (command.equals("type")) {
@@ -121,43 +123,57 @@ public class Main {
             char c = input.charAt(i);
 
             if (escapeNext) {
+                // Handle escaped characters
                 currentToken.append(c);
                 escapeNext = false;
             } else if (c == '\\') {
                 if (inSingleQuotes) {
+                    // Inside single quotes, backslash is treated as literal except for single quote
                     if (i + 1 < input.length() && input.charAt(i + 1) == '\'') {
+                        // Escape the single quote
                         escapeNext = true;
                     } else {
+                        // Treat the backslash as a literal character
                         currentToken.append(c);
                     }
                 } else if (inDoubleQuotes) {
+                    // Inside double quotes, backslash only escapes specific characters
                     if (i + 1 < input.length()) {
                         char nextChar = input.charAt(i + 1);
                         if (nextChar == '\\' || nextChar == '"' || nextChar == '$' || nextChar == '\n') {
+                            // Preserve the backslash for these special characters
                             escapeNext = true;
                         } else {
+                            // Treat the backslash as a literal character
                             currentToken.append(c);
                         }
                     } else {
+                        // Backslash at the end of input, treat as literal
                         currentToken.append(c);
                     }
                 } else {
+                    // Outside quotes, backslash always escapes the next character
                     escapeNext = true;
                 }
             } else if (c == '\'' && !inDoubleQuotes) {
+                // Toggle single quotes
                 inSingleQuotes = !inSingleQuotes;
             } else if (c == '"' && !inSingleQuotes) {
+                // Toggle double quotes
                 inDoubleQuotes = !inDoubleQuotes;
             } else if (Character.isWhitespace(c) && !inSingleQuotes && !inDoubleQuotes) {
+                // End of token if not inside quotes
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 }
             } else {
+                // Append the character to the current token
                 currentToken.append(c);
             }
         }
 
+        // Add the last token if it exists
         if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
         }
@@ -165,52 +181,15 @@ public class Main {
         return tokens.toArray(new String[0]);
     }
 
-    private static String[] parseRedirection(String input) {
-        String command = input;
-        String outputFile = null;
-        String errorFile = null;
-
-        if (input.contains("2>")) {
-            String[] parts = input.split("2>", 2);
-            if (parts.length == 2) {
-                command = parts[0].trim();
-                errorFile = parts[1].trim();
-            }
-        }
-
-        if (command.contains(">")) {
-            String[] parts = command.split(">", 2);
-            if (parts.length == 2) {
-                command = parts[0].trim();
-                outputFile = parts[1].trim();
-            }
-        }
-
-        return new String[] { command, outputFile, errorFile };
-    }
-
-    private static void writeToFile(String filePath, String content) {
-        File file = new File(filePath);
-        File parentDir = file.getParentFile();
-        if (parentDir != null && !parentDir.exists()) {
-            parentDir.mkdirs();
-        }
-        try (FileWriter writer = new FileWriter(file)) {
-            writer.write(content);
-        } catch (IOException e) {
-            System.err.println("Error writing to file: " + e.getMessage());
-        }
-    }
-
     private static void executeProgram(File programFile, String[] arguments, String outputFile, String errorFile) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
-            commandWithArgs[0] = programName;
+            commandWithArgs[0] = programName; // Use just the program name for argv[0]
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
             processBuilder.directory(new File(System.getProperty("user.dir")));
-            processBuilder.environment().put("PATH", System.getenv("PATH"));
+            processBuilder.environment().put("PATH", System.getenv("PATH")); // Ensure PATH is correctly set
             Process process = processBuilder.start();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -235,6 +214,67 @@ public class Main {
             process.waitFor();
         } catch (IOException | InterruptedException e) {
             System.err.println("Error executing program: " + e.getMessage());
+        }
+    }
+
+    private static String[] parseRedirection(String input) {
+        String command = input;
+        String outputFile = null;
+        String errorFile = null;
+
+        // Check for '2>' first
+        if (input.contains("2>")) {
+            String[] parts = input.split("2>", 2); // Split on the first occurrence of '2>'
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                errorFile = parts[1].trim();
+            }
+        }
+
+        // Check for '1>' or '>' after handling '2>'
+        if (command.contains("1>")) {
+            String[] parts = command.split("1>", 2); // Split on the first occurrence of '1>'
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                outputFile = parts[1].trim();
+            }
+        } else if (command.contains(">")) {
+            String[] parts = command.split(">", 2); // Split on the first occurrence of '>'
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                outputFile = parts[1].trim();
+            }
+        }
+
+        return new String[] { command, outputFile, errorFile };
+    }
+
+    private static void writeToFile(String filePath, String content) {
+        File file = new File(filePath);
+        File parentDir = file.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            parentDir.mkdirs(); // Create parent directories if they don't exist
+        }
+        try (FileWriter writer = new FileWriter(file)) {
+            writer.write(content);
+        } catch (IOException e) {
+            System.err.println("Error writing to file: " + e.getMessage());
+        }
+    }
+
+    private static void writeToFile(String filePath, BufferedReader reader) throws IOException {
+        File file = new File(filePath);
+        File parentDir = file.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            parentDir.mkdirs(); // Create parent directories if they don't exist
+        }
+        try (FileWriter writer = new FileWriter(file)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                writer.write(line + "\n");
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing to file: " + e.getMessage());
         }
     }
 }
