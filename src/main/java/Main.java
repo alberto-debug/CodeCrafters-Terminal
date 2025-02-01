@@ -1,9 +1,5 @@
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +27,7 @@ public class Main {
             String[] redirectionParts = parseRedirection(input);
             String commandInput = redirectionParts[0];
             String outputFile = redirectionParts[1];
+            String errorFile = redirectionParts[2];
 
             // Parse command and arguments
             String[] commandAndArgs = parseCommandLine(commandInput);
@@ -100,7 +97,7 @@ public class Main {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
                         found = true;
-                        executeProgram(file, arguments, outputFile);
+                        executeProgram(file, arguments, outputFile, errorFile);
                         break;
                     }
                 }
@@ -122,57 +119,43 @@ public class Main {
             char c = input.charAt(i);
 
             if (escapeNext) {
-                // Handle escaped characters
                 currentToken.append(c);
                 escapeNext = false;
             } else if (c == '\\') {
                 if (inSingleQuotes) {
-                    // Inside single quotes, backslash is treated as literal except for single quote
                     if (i + 1 < input.length() && input.charAt(i + 1) == '\'') {
-                        // Escape the single quote
                         escapeNext = true;
                     } else {
-                        // Treat the backslash as a literal character
                         currentToken.append(c);
                     }
                 } else if (inDoubleQuotes) {
-                    // Inside double quotes, backslash only escapes specific characters
                     if (i + 1 < input.length()) {
                         char nextChar = input.charAt(i + 1);
                         if (nextChar == '\\' || nextChar == '"' || nextChar == '$' || nextChar == '\n') {
-                            // Preserve the backslash for these special characters
                             escapeNext = true;
                         } else {
-                            // Treat the backslash as a literal character
                             currentToken.append(c);
                         }
                     } else {
-                        // Backslash at the end of input, treat as literal
                         currentToken.append(c);
                     }
                 } else {
-                    // Outside quotes, backslash always escapes the next character
                     escapeNext = true;
                 }
             } else if (c == '\'' && !inDoubleQuotes) {
-                // Toggle single quotes
                 inSingleQuotes = !inSingleQuotes;
             } else if (c == '"' && !inSingleQuotes) {
-                // Toggle double quotes
                 inDoubleQuotes = !inDoubleQuotes;
             } else if (Character.isWhitespace(c) && !inSingleQuotes && !inDoubleQuotes) {
-                // End of token if not inside quotes
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 }
             } else {
-                // Append the character to the current token
                 currentToken.append(c);
             }
         }
 
-        // Add the last token if it exists
         if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
         }
@@ -180,36 +163,50 @@ public class Main {
         return tokens.toArray(new String[0]);
     }
 
-    private static void executeProgram(File programFile, String[] arguments, String outputFile) {
+    private static void executeProgram(File programFile, String[] arguments, String outputFile, String errorFile) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
-            commandWithArgs[0] = programName; // Use just the program name for argv[0]
+            commandWithArgs[0] = programName;
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
             processBuilder.directory(new File(System.getProperty("user.dir")));
-            processBuilder.environment().put("PATH", System.getenv("PATH")); // Ensure PATH is correctly set
+            processBuilder.environment().put("PATH", System.getenv("PATH"));
             Process process = processBuilder.start();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-            String line;
+
+            // Handle output redirection
             if (outputFile != null) {
                 try (FileWriter writer = new FileWriter(outputFile)) {
+                    String line;
                     while ((line = reader.readLine()) != null) {
                         writer.write(line + "\n");
                     }
                 }
             } else {
+                String line;
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
                 }
             }
 
-            String errorLine;
-            while ((errorLine = errorReader.readLine()) != null) {
-                System.err.println(errorLine);
+            // Handle error redirection
+            if (errorFile != null) {
+                try (FileWriter errorWriter = new FileWriter(errorFile)) {
+                    String errorLine;
+                    while ((errorLine = errorReader.readLine()) != null) {
+                        errorWriter.write(errorLine + "\n");
+                    }
+                }
+            } else {
+                String errorLine;
+                while ((errorLine = errorReader.readLine()) != null) {
+                    System.err.println(errorLine);
+                }
             }
+
             process.waitFor();
         } catch (IOException | InterruptedException e) {
             System.err.println("Error executing program: " + e.getMessage());
@@ -217,25 +214,24 @@ public class Main {
     }
 
     private static String[] parseRedirection(String input) {
-        // Check for '1>' first, then '>'
-        if (input.contains("1>")) {
-            String[] parts = input.split("1>", 2); // Split on the first occurrence of '1>'
+        // Check for '2>' redirection first
+        if (input.contains("2>")) {
+            String[] parts = input.split("2>", 2); // Split on the first occurrence of '2>'
             if (parts.length == 2) {
-                // Trim whitespace from the command and file path
-                String command = parts[0].trim();
-                String filePath = parts[1].trim();
-                return new String[] { command, filePath };
-            }
-        } else if (input.contains(">")) {
-            String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
-            if (parts.length == 2) {
-                // Trim whitespace from the command and file path
-                String command = parts[0].trim();
-                String filePath = parts[1].trim();
-                return new String[] { command, filePath };
+                String[] commandParts = parseRedirection(parts[0].trim()); // Recursively parse for any other redirection
+                return new String[] { commandParts[0], null, parts[1].trim() }; // Standard output and error file paths
             }
         }
+
+        // Handle standard output redirection
+        if (input.contains(">")) {
+            String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
+            if (parts.length == 2) {
+                return new String[] { parts[0].trim(), parts[1].trim(), null }; // Command and output file
+            }
+        }
+        
         // No redirection found
-        return new String[] { input, null };
+        return new String[] { input, null, null };
     }
 }
