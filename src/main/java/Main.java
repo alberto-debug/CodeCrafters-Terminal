@@ -1,7 +1,13 @@
 
-import java.io.*;
-import java.nio.file.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -25,6 +31,7 @@ public class Main {
             String[] redirectionParts = parseRedirection(input);
             String commandInput = redirectionParts[0];
             String outputFile = redirectionParts[1];
+            String errorFile = redirectionParts[2];
 
             // Parse command and arguments
             String[] commandAndArgs = parseCommandLine(commandInput);
@@ -33,10 +40,13 @@ public class Main {
             System.arraycopy(commandAndArgs, 1, arguments, 0, commandAndArgs.length - 1);
 
             if (command.equals("echo")) {
-                if (arguments.length == 0) {
-                    System.out.println();
+                String output = (arguments.length == 0) ? "" : String.join(" ", arguments);
+                if (outputFile != null) {
+                    writeToFile(outputFile, output);
+                } else if (errorFile != null) {
+                    writeToFile(errorFile, output);
                 } else {
-                    System.out.println(String.join(" ", arguments));
+                    System.out.println(output);
                 }
             } else if (command.equals("type")) {
                 String typeArg = arguments.length > 0 ? arguments[0] : "";
@@ -89,7 +99,7 @@ public class Main {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
                         found = true;
-                        executeProgram(file, arguments, outputFile);
+                        executeProgram(file, arguments, outputFile, errorFile);
                         break;
                     }
                 }
@@ -155,65 +165,76 @@ public class Main {
         return tokens.toArray(new String[0]);
     }
 
-    private static void executeProgram(File programFile, String[] arguments, String outputFile) {
+    private static String[] parseRedirection(String input) {
+        String command = input;
+        String outputFile = null;
+        String errorFile = null;
+
+        if (input.contains("2>")) {
+            String[] parts = input.split("2>", 2);
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                errorFile = parts[1].trim();
+            }
+        }
+
+        if (command.contains(">")) {
+            String[] parts = command.split(">", 2);
+            if (parts.length == 2) {
+                command = parts[0].trim();
+                outputFile = parts[1].trim();
+            }
+        }
+
+        return new String[] { command, outputFile, errorFile };
+    }
+
+    private static void writeToFile(String filePath, String content) {
+        File file = new File(filePath);
+        File parentDir = file.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            parentDir.mkdirs();
+        }
+        try (FileWriter writer = new FileWriter(file)) {
+            writer.write(content);
+        } catch (IOException e) {
+            System.err.println("Error writing to file: " + e.getMessage());
+        }
+    }
+
+    private static void executeProgram(File programFile, String[] arguments, String outputFile, String errorFile) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
             commandWithArgs[0] = programName;
             System.arraycopy(arguments, 0, commandWithArgs, 1, arguments.length);
-
-            // Create the directory if it doesn't exist
-            if (outputFile != null) {
-                File outputFileDir = new File(outputFile).getParentFile();
-                if (outputFileDir != null && !outputFileDir.exists()) {
-                    outputFileDir.mkdirs();
-                }
-            }
-
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
             processBuilder.directory(new File(System.getProperty("user.dir")));
             processBuilder.environment().put("PATH", System.getenv("PATH"));
-
             Process process = processBuilder.start();
+
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-
-            // Redirect error stream to file if outputFile is provided
-            if (outputFile != null) {
-                PrintStream fileStream = new PrintStream(new FileOutputStream(outputFile));
-                System.setErr(fileStream);
-            }
-
             String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
+            if (outputFile != null) {
+                writeToFile(outputFile, reader);
+            } else {
+                while ((line = reader.readLine()) != null) {
+                    System.out.println(line);
+                }
             }
+
             String errorLine;
-            while ((errorLine = errorReader.readLine()) != null) {
-                System.err.println(errorLine);
+            if (errorFile != null) {
+                writeToFile(errorFile, errorReader);
+            } else {
+                while ((errorLine = errorReader.readLine()) != null) {
+                    System.err.println(errorLine);
+                }
             }
             process.waitFor();
         } catch (IOException | InterruptedException e) {
             System.err.println("Error executing program: " + e.getMessage());
         }
-    }
-
-    private static String[] parseRedirection(String input) {
-        if (input.contains("2>")) {
-            String[] parts = input.split("2>", 2); // Split on the first occurrence of '2>'
-            if (parts.length == 2) {
-                String command = parts[0].trim();
-                String filePath = parts[1].trim();
-                return new String[] { command, filePath };
-            }
-        } else if (input.contains(">")) {
-            String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
-            if (parts.length == 2) {
-                String command = parts[0].trim();
-                String filePath = parts[1].trim();
-                return new String[] { command, filePath };
-            }
-        }
-        return new String[] { input, null };
     }
 }
