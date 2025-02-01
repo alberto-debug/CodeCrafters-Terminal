@@ -117,14 +117,16 @@ public class Main {
 
             // Handle backslashes within quotes
             if (c == '\\' && inQuotes) {
-                // Check if it's an escape sequence that we need to handle
+                // Check if the next character is one of the escape sequences
                 if (i + 1 < input.length() && (input.charAt(i + 1) == '\\' || input.charAt(i + 1) == '$'
                         || input.charAt(i + 1) == '"' || input.charAt(i + 1) == '\n')) {
-                    // We need to escape the next character, so just add the backslash and the next
-                    // character
+                    // Escape the next character
                     currentToken.append(c);
                     escapeNext = true;
                     continue;
+                } else {
+                    // If it's not an escapeable character, treat the backslash as part of the text
+                    currentToken.append(c);
                 }
             }
 
