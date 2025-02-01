@@ -105,10 +105,9 @@ public class Main {
 
         for (char c : input.toCharArray()) {
             if (escape) {
+                // Check for escape sequences
                 if (c == 'n') {
-                    currentToken.append('\n'); // Handle \n as newline character
-                } else if (c == 't') {
-                    currentToken.append('\t'); // Handle \t as tab character
+                    currentToken.append('n'); // Don't interpret as newline
                 } else {
                     currentToken.append(c); // Preserve other escape characters
                 }
