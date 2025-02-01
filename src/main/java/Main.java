@@ -1,5 +1,7 @@
+
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
@@ -24,17 +26,28 @@ public class Main {
             if (input.equals("exit 0")) {
                 break;
             }
-            // Parse command and arguments while preserving quotes
-            String[] commandAndArgs = parseCommandLine(input);
+
+            // Parse redirection
+            String[] redirectionParts = parseRedirection(input);
+            String commandInput = redirectionParts[0];
+            String outputFile = redirectionParts[1];
+
+            // Parse command and arguments
+            String[] commandAndArgs = parseCommandLine(commandInput);
             String command = commandAndArgs[0];
             String[] arguments = new String[commandAndArgs.length - 1];
             System.arraycopy(commandAndArgs, 1, arguments, 0, commandAndArgs.length - 1);
+
             if (command.equals("echo")) {
-                if (arguments.length == 0) {
-                    System.out.println();
+                String output = (arguments.length == 0) ? "" : String.join(" ", arguments);
+                if (outputFile != null) {
+                    try (FileWriter writer = new FileWriter(outputFile)) {
+                        writer.write(output);
+                    } catch (IOException e) {
+                        System.err.println("Error writing to file: " + e.getMessage());
+                    }
                 } else {
-                    // Join arguments with a single space between them
-                    System.out.println(String.join(" ", arguments));
+                    System.out.println(output);
                 }
             } else if (command.equals("type")) {
                 String typeArg = arguments.length > 0 ? arguments[0] : "";
@@ -87,7 +100,7 @@ public class Main {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
                         found = true;
-                        executeProgram(file, arguments);
+                        executeProgram(file, arguments, outputFile);
                         break;
                     }
                 }
@@ -167,7 +180,7 @@ public class Main {
         return tokens.toArray(new String[0]);
     }
 
-    private static void executeProgram(File programFile, String[] arguments) {
+    private static void executeProgram(File programFile, String[] arguments, String outputFile) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
@@ -177,12 +190,22 @@ public class Main {
             processBuilder.directory(new File(System.getProperty("user.dir")));
             processBuilder.environment().put("PATH", System.getenv("PATH")); // Ensure PATH is correctly set
             Process process = processBuilder.start();
+
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
             String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
+            if (outputFile != null) {
+                try (FileWriter writer = new FileWriter(outputFile)) {
+                    while ((line = reader.readLine()) != null) {
+                        writer.write(line + "\n");
+                    }
+                }
+            } else {
+                while ((line = reader.readLine()) != null) {
+                    System.out.println(line);
+                }
             }
+
             String errorLine;
             while ((errorLine = errorReader.readLine()) != null) {
                 System.err.println(errorLine);
@@ -191,5 +214,28 @@ public class Main {
         } catch (IOException | InterruptedException e) {
             System.err.println("Error executing program: " + e.getMessage());
         }
+    }
+
+    private static String[] parseRedirection(String input) {
+        // Check for '1>' first, then '>'
+        if (input.contains("1>")) {
+            String[] parts = input.split("1>", 2); // Split on the first occurrence of '1>'
+            if (parts.length == 2) {
+                // Trim whitespace from the command and file path
+                String command = parts[0].trim();
+                String filePath = parts[1].trim();
+                return new String[] { command, filePath };
+            }
+        } else if (input.contains(">")) {
+            String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
+            if (parts.length == 2) {
+                // Trim whitespace from the command and file path
+                String command = parts[0].trim();
+                String filePath = parts[1].trim();
+                return new String[] { command, filePath };
+            }
+        }
+        // No redirection found
+        return new String[] { input, null };
     }
 }
