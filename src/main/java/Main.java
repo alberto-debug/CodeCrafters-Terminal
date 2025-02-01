@@ -101,31 +101,52 @@ public class Main {
     private static String[] parseCommandLine(String input) {
         List<String> tokens = new ArrayList<>();
         StringBuilder currentToken = new StringBuilder();
-        boolean inQuotes = false;
-        char quoteChar = ' ';
+        boolean inDoubleQuotes = false;
         boolean escapeNext = false;
 
-        for (char c : input.toCharArray()) {
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+
             if (escapeNext) {
+                // Handle escaped characters
                 currentToken.append(c);
                 escapeNext = false;
-            } else if (c == '\\' && !inQuotes) {
-                escapeNext = true;
-            } else if ((c == '"' || c == '\'') && !inQuotes) {
-                inQuotes = true;
-                quoteChar = c;
-            } else if (c == quoteChar && inQuotes) {
-                inQuotes = false;
-            } else if (Character.isWhitespace(c) && !inQuotes) {
+            } else if (c == '\\') {
+                if (inDoubleQuotes) {
+                    // Inside double quotes, backslash only escapes specific characters
+                    if (i + 1 < input.length()) {
+                        char nextChar = input.charAt(i + 1);
+                        if (nextChar == '\\' || nextChar == '$' || nextChar == '"' || nextChar == '\n') {
+                            // Preserve the backslash for these special characters
+                            escapeNext = true;
+                        } else {
+                            // Treat the backslash as a literal character
+                            currentToken.append(c);
+                        }
+                    } else {
+                        // Backslash at the end of input, treat as literal
+                        currentToken.append(c);
+                    }
+                } else {
+                    // Outside double quotes, backslash always escapes the next character
+                    escapeNext = true;
+                }
+            } else if (c == '"') {
+                // Toggle double quotes
+                inDoubleQuotes = !inDoubleQuotes;
+            } else if (Character.isWhitespace(c) && !inDoubleQuotes) {
+                // End of token if not inside double quotes
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 }
             } else {
+                // Append the character to the current token
                 currentToken.append(c);
             }
         }
 
+        // Add the last token if it exists
         if (currentToken.length() > 0) {
             tokens.add(currentToken.toString());
         }
