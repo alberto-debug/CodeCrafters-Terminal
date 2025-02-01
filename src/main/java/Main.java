@@ -105,26 +105,28 @@ public class Main {
 
         for (char c : input.toCharArray()) {
             if (escape) {
-                currentToken.append(c);
+                if (c == 'n') {
+                    currentToken.append('\n'); // Handle \n as newline character
+                } else if (c == 't') {
+                    currentToken.append('\t'); // Handle \t as tab character
+                } else {
+                    currentToken.append(c); // Preserve other escape characters
+                }
                 escape = false;
             } else if (c == '\\') {
-                // If backslash, escape the next character
-                escape = true;
+                escape = true; // Start of an escape sequence
             } else if (c == '\'' && !inDoubleQuotes) {
-                // Toggle single quote state if not inside double quotes
-                inSingleQuotes = !inSingleQuotes;
+                inSingleQuotes = !inSingleQuotes; // Toggle single quotes
             } else if (c == '"' && !inSingleQuotes) {
-                // Toggle double quote state if not inside single quotes
-                inDoubleQuotes = !inDoubleQuotes;
+                inDoubleQuotes = !inDoubleQuotes; // Toggle double quotes
             } else if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(c)) {
-                // Split token when outside quotes and encounter a space
+                // Split tokens by space when not inside quotes
                 if (currentToken.length() > 0) {
                     tokens.add(currentToken.toString());
                     currentToken.setLength(0);
                 }
             } else {
-                // Append the character to the current token
-                currentToken.append(c);
+                currentToken.append(c); // Regular character, add to token
             }
         }
 
