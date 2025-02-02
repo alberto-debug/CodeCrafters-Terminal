@@ -104,20 +104,38 @@ public class Main {
 
         try {
             Process process = processBuilder.start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader stdError = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
+            StringBuilder errorOutput = new StringBuilder();
             String line;
+
+            // Capturar erros (stderr)
+            while ((line = stdError.readLine()) != null) {
+                errorOutput.append(line).append("\n");
+            }
+
+            // Capturar saída normal (stdout)
+            StringBuilder normalOutput = new StringBuilder();
+            while ((line = stdInput.readLine()) != null) {
+                normalOutput.append(line).append("\n");
+            }
+
+            process.waitFor();
+
             if (outputFile != null) {
                 try (FileWriter writer = new FileWriter(outputFile)) {
-                    while ((line = reader.readLine()) != null) {
-                        writer.write(line + "\n");
+                    if (errorOutput.length() > 0) {
+                        writer.write(errorOutput.toString()); // Redireciona stderr
+                    } else {
+                        writer.write(normalOutput.toString()); // Redireciona stdout se não houver erro
                     }
                 }
             } else {
-                while ((line = reader.readLine()) != null) {
-                    System.out.println(line);
-                }
+                System.out.print(normalOutput.toString());
+                System.err.print(errorOutput.toString());
             }
-            process.waitFor();
+
         } catch (IOException | InterruptedException e) {
             System.err.println("Error executing command: " + e.getMessage());
         }
