@@ -191,18 +191,26 @@ public class Main {
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
             String line;
 
-            // Ensure the parent directory exists for the output file
+            // Redirect standard output
             if (outputFile != null) {
-                writeToFile(outputFile, reader);
+                StringBuilder outputContent = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    outputContent.append(line).append("\n");
+                }
+                writeToFile(outputFile, outputContent.toString());
             } else {
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
                 }
             }
 
-            // Ensure the parent directory exists for the error file
+            // Redirect standard error
             if (errorFile != null) {
-                writeToFile(errorFile, errorReader);
+                StringBuilder errorContent = new StringBuilder();
+                while ((line = errorReader.readLine()) != null) {
+                    errorContent.append(line).append("\n");
+                }
+                writeToFile(errorFile, errorContent.toString());
             } else {
                 while ((line = errorReader.readLine()) != null) {
                     System.err.println(line);
@@ -215,26 +223,24 @@ public class Main {
         }
     }
 
-    private static void writeToFile(String filePath, BufferedReader reader) throws IOException {
-        File file = new File(filePath);
-        File parentDir = file.getParentFile();
-        if (parentDir != null && !parentDir.exists()) {
-            parentDir.mkdirs(); // Create the parent directory if it doesn't exist
-        }
-        try (FileWriter writer = new FileWriter(file)) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                writer.write(line + "\n");
-            }
-        }
-    }
-
     private static void writeToFile(String filePath, String content) throws IOException {
         File file = new File(filePath);
         File parentDir = file.getParentFile();
+
+        // Debug: Print the file path and parent directory
+        System.out.println("Writing to file: " + file.getAbsolutePath());
+        System.out.println("Parent directory: " + (parentDir != null ? parentDir.getAbsolutePath() : "null"));
+
+        // Create parent directory if it doesn't exist
         if (parentDir != null && !parentDir.exists()) {
-            parentDir.mkdirs(); // Create the parent directory if it doesn't exist
+            System.out.println("Creating parent directory: " + parentDir.getAbsolutePath());
+            boolean created = parentDir.mkdirs();
+            if (!created) {
+                throw new IOException("Failed to create directory: " + parentDir.getAbsolutePath());
+            }
         }
+
+        // Write content to the file
         try (FileWriter writer = new FileWriter(file)) {
             writer.write(content);
         }
