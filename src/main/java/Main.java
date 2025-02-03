@@ -1,3 +1,4 @@
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -30,7 +31,6 @@ public class Main {
             String[] redirectionParts = parseRedirection(input);
             String commandInput = redirectionParts[0];
             String outputFile = redirectionParts[1];
-            String errorFile = redirectionParts[2];
 
             // Parse command and arguments
             String[] commandAndArgs = parseCommandLine(commandInput);
@@ -41,7 +41,11 @@ public class Main {
             if (command.equals("echo")) {
                 String output = (arguments.length == 0) ? "" : String.join(" ", arguments);
                 if (outputFile != null) {
-                    writeToFile(outputFile, output);
+                    try (FileWriter writer = new FileWriter(outputFile)) {
+                        writer.write(output);
+                    } catch (IOException e) {
+                        System.err.println("Error writing to file: " + e.getMessage());
+                    }
                 } else {
                     System.out.println(output);
                 }
@@ -96,7 +100,7 @@ public class Main {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
                         found = true;
-                        executeProgram(file, arguments, outputFile, errorFile);
+                        executeProgram(file, arguments, outputFile);
                         break;
                     }
                 }
@@ -176,7 +180,7 @@ public class Main {
         return tokens.toArray(new String[0]);
     }
 
-    private static void executeProgram(File programFile, String[] arguments, String outputFile, String errorFile) {
+    private static void executeProgram(File programFile, String[] arguments, String outputFile) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
@@ -190,88 +194,48 @@ public class Main {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
             String line;
-
-            // Redirect standard output
             if (outputFile != null) {
-                StringBuilder outputContent = new StringBuilder();
-                while ((line = reader.readLine()) != null) {
-                    outputContent.append(line).append("\n");
+                try (FileWriter writer = new FileWriter(outputFile)) {
+                    while ((line = reader.readLine()) != null) {
+                        writer.write(line + "\n");
+                    }
                 }
-                writeToFile(outputFile, outputContent.toString());
             } else {
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
                 }
             }
 
-            // Redirect standard error
-            if (errorFile != null) {
-                StringBuilder errorContent = new StringBuilder();
-                while ((line = errorReader.readLine()) != null) {
-                    errorContent.append(line).append("\n");
-                }
-                writeToFile(errorFile, errorContent.toString());
-            } else {
-                while ((line = errorReader.readLine()) != null) {
-                    System.err.println(line);
-                }
+            String errorLine;
+            while ((errorLine = errorReader.readLine()) != null) {
+                System.err.println(errorLine);
             }
-
             process.waitFor();
         } catch (IOException | InterruptedException e) {
             System.err.println("Error executing program: " + e.getMessage());
         }
     }
 
-    private static void writeToFile(String filePath, String content) throws IOException {
-        File file = new File(filePath);
-        File parentDir = file.getParentFile();
-
-        // Debug: Print the file path and parent directory
-        System.out.println("Writing to file: " + file.getAbsolutePath());
-        System.out.println("Parent directory: " + (parentDir != null ? parentDir.getAbsolutePath() : "null"));
-
-        // Create parent directory if it doesn't exist
-        if (parentDir != null && !parentDir.exists()) {
-            System.out.println("Creating parent directory: " + parentDir.getAbsolutePath());
-            boolean created = parentDir.mkdirs();
-            if (!created) {
-                throw new IOException("Failed to create directory: " + parentDir.getAbsolutePath());
-            }
-        }
-
-        // Write content to the file
-        try (FileWriter writer = new FileWriter(file)) {
-            writer.write(content);
-        }
-    }
-
     private static String[] parseRedirection(String input) {
-        String command = input;
-        String outputFile = null;
-        String errorFile = null;
-
-        // Check for '2>' first, then '1>', then '>'
-        if (input.contains("2>")) {
-            String[] parts = input.split("2>", 2); // Split on the first occurrence of '2>'
-            if (parts.length == 2) {
-                command = parts[0].trim();
-                errorFile = parts[1].trim();
-            }
-        } else if (input.contains("1>")) {
+        // Check for '1>' first, then '>'
+        if (input.contains("1>")) {
             String[] parts = input.split("1>", 2); // Split on the first occurrence of '1>'
             if (parts.length == 2) {
-                command = parts[0].trim();
-                outputFile = parts[1].trim();
+                // Trim whitespace from the command and file path
+                String command = parts[0].trim();
+                String filePath = parts[1].trim();
+                return new String[] { command, filePath };
             }
         } else if (input.contains(">")) {
             String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
             if (parts.length == 2) {
-                command = parts[0].trim();
-                outputFile = parts[1].trim();
+                // Trim whitespace from the command and file path
+                String command = parts[0].trim();
+                String filePath = parts[1].trim();
+                return new String[] { command, filePath };
             }
         }
-
-        return new String[] { command, outputFile, errorFile };
+        // No redirection found
+        return new String[] { input, null };
     }
 }
