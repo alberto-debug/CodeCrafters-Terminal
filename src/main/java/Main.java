@@ -38,9 +38,21 @@ public class Main {
 
     private static final StringBuilder line = new StringBuilder();
 
-    private static final List<String> autoCmd = new ArrayList<>(
+    private static final List<String> autoCmd = new ArrayList<>() {
 
-            List.of(CmdType.echo.name(), CmdType.type.name(), CmdType.exit.name()));
+        {
+
+            add(CmdType.echo.name());
+
+            add(CmdType.type.name());
+
+            add(CmdType.exit.name());
+
+        }
+
+    };
+
+    private static final List<String> matchCmd = new ArrayList<>();
 
     private static final Map<String, CmdHandler> cmdMap = new HashMap<>() {
 
@@ -166,9 +178,11 @@ public class Main {
 
                     autoCmd.add(fileName);
 
+                    // autoCmd.add(filePath.toAbsolutePath().toString());
+
                 }
 
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
 
@@ -1016,15 +1030,17 @@ public class Main {
 
         line.setLength(0);
 
+        matchCmd.clear();
+
+        int tabPressed = 0;
+
         print("$ ");
 
         try {
 
-            char c;
-
             while (true) {
 
-                c = (char) reader.read();
+                char c = (char) reader.read();
 
                 if (c == '\n') {
 
@@ -1038,33 +1054,87 @@ public class Main {
 
                     // System.out.println("1 "+line);
 
-                    for (String cmd : autoCmd) {
+                    tabPressed++;
 
-                        if (cmd.startsWith(line.toString())) {
+                    if (tabPressed == 1) {
 
-                            while (line.length() < cmd.length()) {
+                        Set<String> autoCmdSet = new HashSet<>();
 
-                                char ac = cmd.charAt(line.length());
+                        for (String cmd : autoCmd) {
 
-                                line.append(ac);
+                            // if(cmd.contains(line.toString())){
 
-                                System.out.print(ac);
+                            if (cmd.startsWith(line.toString())) {
+
+                                autoCmdSet.add(cmd);
 
                             }
 
-                            // line = new StringBuilder(cmd);
+                        }
 
-                            line.append(" ");
+                        matchCmd.addAll(autoCmdSet);
 
-                            System.out.print(" ");
+                        if (matchCmd.size() > 1) {
+
+                            Collections.sort(matchCmd);
 
                         }
 
                     }
 
-                    System.out.print("\u0007"); // 蜂鸣
+                    // if(line.toString().equals("ech")){
 
-                    // System.out.print("\\a");
+                    // println("tabPressed="+tabPressed+", "+autoCmd+", "+matchCmd);
+
+                    // }
+
+                    int matchCount = matchCmd.size();
+
+                    if (matchCount == 0) {
+
+                        ringBell();
+
+                    } else if (matchCount == 1) {
+
+                        // System.out.println(matchCmd);
+
+                        String cmd = matchCmd.get(0);
+
+                        while (line.length() < cmd.length()) {
+
+                            char ac = cmd.charAt(line.length());
+
+                            line.append(ac);
+
+                            System.out.print(ac);
+
+                        }
+
+                        line.append(" ");
+
+                        System.out.print(" ");
+
+                    } else {
+
+                        if (tabPressed == 1) {
+
+                            ringBell();
+
+                        } else {
+
+                            // println("tabPressed="+tabPressed+", "+matchCmd);
+
+                            String msg = String.join("  ", matchCmd);
+
+                            println("");
+
+                            println(msg);
+
+                            print("$ " + line);
+
+                        }
+
+                    }
 
                     // System.out.println("2 "+line);
 
@@ -1149,6 +1219,14 @@ public class Main {
         System.out.println("\r" + msg);
 
         // System.out.flush();
+
+    }
+
+    private static void ringBell() {
+
+        System.out.print("\u0007"); // 蜂鸣
+
+        // System.out.print("\\a");
 
     }
 
