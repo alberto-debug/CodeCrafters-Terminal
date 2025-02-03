@@ -276,7 +276,7 @@ public class Main {
 
                         if (!inSDQuotes) {
 
-                            if (i != length - 1 && input.charAt(i + 2) == '"') {
+                            if (i != length - 1 && input.charAt(i - 2) == '"') {
 
                                 continue;
 
