@@ -42,9 +42,30 @@ public class Main {
     }
 
     private static void eval(String input) {
+        if (input.endsWith(" ")) {
+            String cmdPrefix = input.trim();
+            // Try to autocomplete the command
+            String autocomplete = autocompleteCmd(cmdPrefix);
+            if (autocomplete != null) {
+                input = autocomplete; // Replace the input with the completed command
+            }
+        }
         Cmd cmd = parseCmd(input);
         CmdHandler handler = cmdMap.getOrDefault(cmd.cmd, ProgramCmd.INSTANCE);
         handler.eval(cmd);
+    }
+
+    private static String autocompleteCmd(String cmdPrefix) {
+        // Find all commands starting with cmdPrefix
+        List<String> possibleCmds = Arrays.stream(CmdType.values())
+                .map(Enum::name)
+                .filter(cmd -> cmd.startsWith(cmdPrefix))
+                .collect(Collectors.toList());
+
+        if (possibleCmds.size() == 1) {
+            return possibleCmds.get(0); // If exactly one match, complete it
+        }
+        return null; // No autocompletion
     }
 
     private static Cmd parseCmd(String input) {
