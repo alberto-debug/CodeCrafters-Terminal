@@ -24,8 +24,6 @@ public class Main {
 
             System.getProperty("os.name").toLowerCase();
 
-    private static final String win = "win";
-
     private static final Scanner scanner = new Scanner(System.in);
 
     private static final List<Path> PATH = new ArrayList<>();
@@ -135,7 +133,7 @@ public class Main {
     }
 
     private static boolean osIsWin() {
-        return osName.contains(win);
+        return osName.contains("win");
     }
 
     private static void parseSysPath(String[] args) {
@@ -519,7 +517,7 @@ public class Main {
 
         public void eval(Cmd cmd) {
 
-            println("");
+            newline();
 
             System.exit(0);
 
@@ -664,11 +662,11 @@ public class Main {
 
                     List<String> commandWithArgs = new ArrayList<>(); // 创建参数列表
 
-                    // commandWithArgs.add(filePath.toString());
+                    // commandWithArgs.add(filePath.toString()); //
+
+                    // 这种是加入program全路径，下面是加入program当前路径
 
                     commandWithArgs.add(program);
-
-                    StringBuilder redirectLines = new StringBuilder();
 
                     List<String> args = cmd.args;
 
@@ -699,6 +697,8 @@ public class Main {
                     }
 
                     commandWithArgs.addAll(args);
+
+                    StringBuilder redirectLines = new StringBuilder();
 
                     ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
 
@@ -1030,8 +1030,6 @@ public class Main {
 
         line.setLength(0);
 
-        matchCmd.clear();
-
         int tabPressed = 0;
 
         print("$ ");
@@ -1056,29 +1054,29 @@ public class Main {
 
                     tabPressed++;
 
-                    if (tabPressed == 1) {
+                    matchCmd.clear();
 
-                        Set<String> autoCmdSet = new HashSet<>();
+                    Set<String> autoCmdSet =
 
-                        for (String cmd : autoCmd) {
+                            new HashSet<>(); // 去重，因为可能系统路径下还有其他echo
 
-                            // if(cmd.contains(line.toString())){
+                    for (String cmd : autoCmd) {
 
-                            if (cmd.startsWith(line.toString())) {
+                        // if(cmd.contains(line.toString())){
 
-                                autoCmdSet.add(cmd);
+                        if (cmd.startsWith(line.toString())) {
 
-                            }
-
-                        }
-
-                        matchCmd.addAll(autoCmdSet);
-
-                        if (matchCmd.size() > 1) {
-
-                            Collections.sort(matchCmd);
+                            autoCmdSet.add(cmd);
 
                         }
+
+                    }
+
+                    matchCmd.addAll(autoCmdSet);
+
+                    if (matchCmd.size() > 1) {
+
+                        Collections.sort(matchCmd);
 
                     }
 
@@ -1095,8 +1093,6 @@ public class Main {
                         ringBell();
 
                     } else if (matchCount == 1) {
-
-                        // System.out.println(matchCmd);
 
                         String cmd = matchCmd.get(0);
 
@@ -1116,21 +1112,39 @@ public class Main {
 
                     } else {
 
-                        if (tabPressed == 1) {
+                        if (matchCmdSameLen()) {
 
-                            ringBell();
+                            if (tabPressed == 1) {
+
+                                ringBell();
+
+                            } else {
+
+                                // println("tabPressed="+tabPressed+", "+matchCmd);
+
+                                String msg = String.join("  ", matchCmd);
+
+                                newline();
+
+                                println(msg);
+
+                                print("$ " + line);
+
+                            }
 
                         } else {
 
-                            // println("tabPressed="+tabPressed+", "+matchCmd);
+                            String cmd = matchCmd.get(0);
 
-                            String msg = String.join("  ", matchCmd);
+                            while (line.length() < cmd.length()) {
 
-                            println("");
+                                char ac = cmd.charAt(line.length());
 
-                            println(msg);
+                                line.append(ac);
 
-                            print("$ " + line);
+                                System.out.print(ac);
+
+                            }
 
                         }
 
@@ -1163,6 +1177,30 @@ public class Main {
             return null;
 
         }
+
+    }
+
+    private static boolean matchCmdSameLen() { // 是否匹配的命令是相同长度
+
+        boolean matchCmdSameLen = true;
+
+        String firstCmd = matchCmd.get(0);
+
+        int firstCmdLen = firstCmd.length();
+
+        for (int i = 1; i < matchCmd.size(); i++) {
+
+            if (matchCmd.get(i).length() != firstCmdLen) {
+
+                matchCmdSameLen = false;
+
+                break;
+
+            }
+
+        }
+
+        return matchCmdSameLen;
 
     }
 
@@ -1214,11 +1252,41 @@ public class Main {
 
     }
 
+    /**
+     * 
+     * 由于终端中设置了原始模式（raw
+     * 
+     * mode）并禁用了回显（echo），实际上是在绕过终端的常规处理逻辑，直接与终端进行交互，可能会导致问题
+     *
+     * 
+     * 
+     * 1、光标位置和覆盖问题：在正常模式下，终端会自动处理换行、回车等控制字符，并且会维护一个当前光标的位置。
+     * 
+     * 然而，在原始模式下，这些行为需要手动管理。如果你没有正确地管理光标位置，
+     * 
+     * 比如在输出后没有移动光标到新的一行或者适当的位置，那么后续的输出可能会从之前输出结束的地方开始，
+     * 
+     * 导致看起来像是前面有空格或覆盖了之前的输出。
+     *
+     * 
+     * 
+     * 2、缓冲区刷新问题：System.out
+     * 
+     * 是一个带缓冲的流。在某些情况下，特别是当终端设置为原始模式时，缓冲区的行为可能不如预期那样工作。
+     * 
+     * 如果缓冲区中的数据没有及时刷新，可能会出现不正确的输出格式
+     *
+     * 
+     * 
+     * 解决问题：确保正确管理光标位置，在输出信息前后使用适当的ANSI转义序列来控制光标位置。例如使用\r返回行首，或者\n移动到下一行
+     * 
+     */
+
     private static void println(String msg) {
 
         System.out.println("\r" + msg);
 
-        // System.out.flush();
+        // System.out.flush(); // 手动刷新输出流-不起作用
 
     }
 
@@ -1227,6 +1295,12 @@ public class Main {
         System.out.print("\u0007"); // 蜂鸣
 
         // System.out.print("\\a");
+
+    }
+
+    private static void newline() {
+
+        println(""); // 换行
 
     }
 
