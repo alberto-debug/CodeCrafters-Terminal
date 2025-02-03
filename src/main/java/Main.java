@@ -282,7 +282,7 @@ public class Main {
 
                             }
 
-                            if (i != 0 && input.charAt(i - 0) == '"') {
+                            if (i != 0 && input.charAt(i - 3) == '"') {
 
                                 continue;
 
