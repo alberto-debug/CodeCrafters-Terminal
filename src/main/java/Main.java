@@ -1,21 +1,12 @@
 import java.io.BufferedReader;
-
 import java.io.File;
-
 import java.io.IOException;
-
 import java.io.InputStreamReader;
-
 import java.nio.file.Files;
-
 import java.nio.file.Path;
-
 import java.nio.file.Paths;
-
 import java.util.*;
-
 import java.util.stream.Collectors;
-
 import java.util.stream.Stream;
 
 public class Main {
@@ -30,9 +21,7 @@ public class Main {
 
     private static Path WORK_DIR;
 
-    private static final BufferedReader reader =
-
-            new BufferedReader(new InputStreamReader(System.in));
+    private static final BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
     private static final StringBuilder line = new StringBuilder();
 
@@ -41,9 +30,7 @@ public class Main {
         {
 
             add(CmdType.echo.name());
-
             add(CmdType.type.name());
-
             add(CmdType.exit.name());
 
         }
@@ -61,16 +48,10 @@ public class Main {
                 put(cmdType.name(), cmdType.handler);
 
             }
-
         }
-
     };
 
     public static void main(String[] args) {
-
-        // Runtime.getRuntime().addShutdownHook(new Thread(Main::restoreTerminal));
-
-        // // 保存原有终端设置，并在退出时恢复
 
         setTerminalRawMode();
 
