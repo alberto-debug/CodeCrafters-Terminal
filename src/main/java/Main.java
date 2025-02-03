@@ -38,9 +38,9 @@ public class Main {
 
     private static final StringBuilder line = new StringBuilder();
 
-    private static final List<String> autoCmd =
+    private static final List<String> autoCmd = new ArrayList<>(
 
-            List.of(CmdType.echo.name(), CmdType.type.name(), CmdType.exit.name());
+            List.of(CmdType.echo.name(), CmdType.type.name(), CmdType.exit.name()));
 
     private static final Map<String, CmdHandler> cmdMap = new HashMap<>() {
 
@@ -143,6 +143,36 @@ public class Main {
         PATH.addAll(pathList);
 
         // println(String.valueOf(PATH));
+
+        addPathToAutoCmd();
+
+    }
+
+    private static void addPathToAutoCmd() {
+
+        for (Path path : PATH) {
+
+            try (Stream<Path> paths = Files.walk(path)) {
+
+                List<Path> filePaths =
+
+                        paths.filter(Files::isRegularFile).collect(Collectors.toList());
+
+                for (Path filePath : filePaths) {
+
+                    String fileName = filePath.getFileName().toString();
+
+                    // System.out.println(fileName+", "+firstArg);
+
+                    autoCmd.add(fileName);
+
+                }
+
+            } catch (Exception e) {
+
+            }
+
+        }
 
     }
 
@@ -1032,7 +1062,7 @@ public class Main {
 
                     }
 
-                    System.out.print("\u0007");
+                    System.out.print("\u0007"); // 蜂鸣
 
                     // System.out.print("\\a");
 
