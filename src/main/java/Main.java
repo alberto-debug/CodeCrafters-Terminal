@@ -1032,6 +1032,10 @@ public class Main {
 
                     }
 
+                    System.out.print("\u0007");
+
+                    // System.out.print("\\a");
+
                     // System.out.println("2 "+line);
 
                     // System.out.println(line);
