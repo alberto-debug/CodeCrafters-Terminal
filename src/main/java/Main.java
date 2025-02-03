@@ -7,7 +7,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Main {
@@ -18,33 +17,30 @@ public class Main {
         Path currentPath = Paths.get("");
         String pwd = currentPath.toAbsolutePath().toString();
 
-        // Autocompletion method
-        while (true) {
+        // Uncomment this block to pass the first stage
+        repl: while (true) {
             System.out.print("$ ");
             Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine();
-            
-            // Autocomplete the command input
-            input = autocomplete(input);
-
             List<String> commands = parseCommand(input);
-            String command = commands.get(0);
+            String command = commands.getFirst();
             Map<String, File> scripts = new HashMap<>();
             for (String path : paths) {
                 try (Stream<Path> directories = Files.walk(Paths.get(path))) {
                     directories
+                            // .filter(Files::isRegularFile)
+                            // .filter(Files::isExecutable)
                             .forEach(file -> scripts.put(String.valueOf(file.getFileName()), file.toFile()));
                 } catch (Exception _) {
 
                 }
             }
-
             if (isBuiltin(command)) {
                 Builtin builtin = Builtin.valueOf(command);
                 switch (builtin) {
                     case exit: {
                         if ("0".equals(commands.get(1)))
-                            return;
+                            break repl;
                     }
 
                     case type: {
@@ -209,22 +205,6 @@ public class Main {
         }
         arg.add(currentArg.toString());
         return arg;
-    }
-
-    // Autocompletion for commands
-    private static String autocomplete(String input) {
-        List<String> availableCommands = List.of("echo", "ls", "pwd", "cd", "exit", "type");
-        
-        // Find matching commands based on input
-        List<String> matches = availableCommands.stream()
-            .filter(command -> command.startsWith(input))
-            .collect(Collectors.toList());
-
-        // If there is one match, return it, otherwise return the input as is
-        if (matches.size() == 1) {
-            return matches.get(0);
-        }
-        return input;
     }
 }
 
