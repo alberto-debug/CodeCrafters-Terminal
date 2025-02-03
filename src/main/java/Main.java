@@ -40,7 +40,7 @@ public class Main {
 
     private static final List<String> autoCmd =
 
-            List.of(CmdType.echo.name(), CmdType.exit.name());
+            List.of(CmdType.echo.name(), CmdType.type.name(), CmdType.exit.name());
 
     private static final Map<String, CmdHandler> cmdMap = new HashMap<>() {
 
@@ -271,6 +271,7 @@ public class Main {
                     if (!inDQuotes) {
 
                         inDQuotes = true;
+
                     } else {
 
                         if (!inSDQuotes) {
@@ -281,7 +282,7 @@ public class Main {
 
                             }
 
-                            if (i != 0 && input.charAt(i - 2) == '"') {
+                            if (i != 0 && input.charAt(i - 1) == '"') {
 
                                 continue;
 
@@ -1023,6 +1024,8 @@ public class Main {
 
                             // line = new StringBuilder(cmd);
 
+                            line.append(" ");
+
                             System.out.print(" ");
 
                         }
@@ -1033,7 +1036,7 @@ public class Main {
 
                     // System.out.println(line);
 
-                    break;
+                    // break;
 
                 } else {
 
