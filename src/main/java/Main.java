@@ -1,3 +1,4 @@
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -30,7 +31,6 @@ public class Main {
             String[] redirectionParts = parseRedirection(input);
             String commandInput = redirectionParts[0];
             String outputFile = redirectionParts[1];
-            String errorFile = redirectionParts[2];
 
             // Parse command and arguments
             String[] commandAndArgs = parseCommandLine(commandInput);
@@ -100,7 +100,7 @@ public class Main {
                     File file = new File(dir, command);
                     if (file.exists() && file.canExecute()) {
                         found = true;
-                        executeProgram(file, arguments, outputFile, errorFile);
+                        executeProgram(file, arguments, outputFile);
                         break;
                     }
                 }
@@ -180,7 +180,7 @@ public class Main {
         return tokens.toArray(new String[0]);
     }
 
-    private static void executeProgram(File programFile, String[] arguments, String outputFile, String errorFile) {
+    private static void executeProgram(File programFile, String[] arguments, String outputFile) {
         try {
             String programName = programFile.getName();
             String[] commandWithArgs = new String[arguments.length + 1];
@@ -189,12 +189,6 @@ public class Main {
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithArgs);
             processBuilder.directory(new File(System.getProperty("user.dir")));
             processBuilder.environment().put("PATH", System.getenv("PATH")); // Ensure PATH is correctly set
-
-            // Redirect stderr to the specified file if errorFile is not null
-            if (errorFile != null) {
-                processBuilder.redirectError(new File(errorFile));
-            }
-
             Process process = processBuilder.start();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -212,14 +206,10 @@ public class Main {
                 }
             }
 
-            // If errorFile is null, print errors to stderr
-            if (errorFile == null) {
-                String errorLine;
-                while ((errorLine = errorReader.readLine()) != null) {
-                    System.err.println(errorLine);
-                }
+            String errorLine;
+            while ((errorLine = errorReader.readLine()) != null) {
+                System.err.println(errorLine);
             }
-
             process.waitFor();
         } catch (IOException | InterruptedException e) {
             System.err.println("Error executing program: " + e.getMessage());
@@ -227,31 +217,25 @@ public class Main {
     }
 
     private static String[] parseRedirection(String input) {
-        String command = input;
-        String outputFile = null;
-        String errorFile = null;
-
-        // Check for '2>' first, then '1>', then '>'
-        if (input.contains("2>")) {
-            String[] parts = input.split("2>", 2); // Split on the first occurrence of '2>'
-            if (parts.length == 2) {
-                command = parts[0].trim();
-                errorFile = parts[1].trim();
-            }
-        } else if (input.contains("1>")) {
+        // Check for '1>' first, then '>'
+        if (input.contains("1>")) {
             String[] parts = input.split("1>", 2); // Split on the first occurrence of '1>'
             if (parts.length == 2) {
-                command = parts[0].trim();
-                outputFile = parts[1].trim();
+                // Trim whitespace from the command and file path
+                String command = parts[0].trim();
+                String filePath = parts[1].trim();
+                return new String[] { command, filePath };
             }
         } else if (input.contains(">")) {
             String[] parts = input.split(">", 2); // Split on the first occurrence of '>'
             if (parts.length == 2) {
-                command = parts[0].trim();
-                outputFile = parts[1].trim();
+                // Trim whitespace from the command and file path
+                String command = parts[0].trim();
+                String filePath = parts[1].trim();
+                return new String[] { command, filePath };
             }
         }
-
-        return new String[] { command, outputFile, errorFile };
+        // No redirection found
+        return new String[] { input, null };
     }
 }
